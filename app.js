@@ -34,7 +34,7 @@ function startAuto(){
   if(!blocks.length||autoRunning)return;
   autoRunning=true;
   const b=$("autoToggle"); if(b)b.textContent="⏸ 停止";
-  const intervalMs=parseInt($("autoInterval")?.value||localStorage.autoInterval||"400",10);
+  const intervalMs=parseInt(($("autoInterval")&&$("autoInterval").value)||localStorage.autoInterval||"400",10);
   autoTimer=setInterval(()=>{
     if(blockIndex>=blocks.length-1){stopAuto();return}
     blockIndex++;
@@ -103,6 +103,6 @@ function finishRecv(){stopCamera();let data=concat(...recv.parts);$("recvStatus"
 function download(bytes,name,type){let u=URL.createObjectURL(new Blob([bytes],{type})),a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(console.error));
-})();
 
 if($("autoInterval"))$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value};
+})();

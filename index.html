@@ -15,7 +15,14 @@ textarea{width:100%;min-height:220px;font-size:18px;padding:14px;border:1px soli
 video{width:100%;max-height:58vh;background:#111;border-radius:14px;object-fit:cover}.status{text-align:center;font-size:18px;margin:12px}.progress{height:10px;background:#ddd;border-radius:9px;overflow:hidden}.progress>div{height:100%;background:#111;width:0}
 select,input[type=number]{font:inherit;padding:10px;border-radius:10px;border:1px solid #bbb}
 .hidden{display:none!important}
-.endButton{width:100%;min-height:52px;margin-top:10px;font-size:20px;font-weight:700;border-radius:12px}</style>
+
+.autoControlWrap{margin:12px 0 10px;width:100%}
+.autoControlWrap button{display:block;width:100%;min-height:76px;font-size:26px;font-weight:700;border-radius:16px}
+.manualControls{display:flex;justify-content:center;gap:12px;margin:8px 0 12px}
+.manualControls button{min-width:78px;min-height:46px;font-size:20px;font-weight:600;border-radius:10px}
+.endButton{display:block;width:100%;min-height:52px;margin-top:10px;font-size:20px;font-weight:700;border-radius:12px}
+
+</style>
 <style>
 html,body{touch-action:manipulation;overscroll-behavior:none}
 button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -23,11 +30,11 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .blockStatus .label{font-size:20px}
 .blockStatus .current{font-size:42px;line-height:1}
 .blockStatus .total{font-size:26px}
-.autoControlWrap{margin:12px 0 10px}.autoControlWrap button{width:100%;min-height:76px;font-size:26px;font-weight:700;border-radius:16px}.manualControls{display:flex;justify-content:center;gap:12px;margin:8px 0 14px}.manualControls button{min-width:78px;min-height:46px;font-size:20px;font-weight:600;border-radius:10px}
-
+.transferControls{display:grid;grid-template-columns:1fr 1fr 1.5fr 1fr;gap:8px;margin:14px 0}
+.transferControls button{min-height:72px;font-size:26px;font-weight:700;border-radius:14px;padding:0 8px}
 #autoToggle{font-size:22px}
 #receiveBlockStatus{margin-top:10px}
-.endButton{width:100%;min-height:52px;margin-top:10px;font-size:20px;font-weight:700;border-radius:12px}</style>
+</style>
 
 </head>
 <body>
@@ -44,13 +51,18 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div class="row"><button id="normalQR">通常QRを表示</button><button id="commQR" class="primary">QR通信で送る</button></div>
 </section>
 <section id="show" class="page">
-<div id="sendStatus" class="status"></div><canvas id="qrCanvas" width="600" height="600"></canvas>
-<div id="waitText" class="status"></div><div class="row"><div class="autoControlWrap"><button id="autoToggle">▶ 自動送信</button></div>
+<div id="sendStatus" class="status"></div>
+<canvas id="qrCanvas" width="600" height="600"></canvas>
+<div id="waitText" class="status"></div>
+<div class="autoControlWrap">
+  <button id="autoToggle">▶ 自動送信</button>
+</div>
 <div class="manualControls">
   <button id="back10">−10</button>
   <button id="prev">←</button>
   <button id="next">→</button>
-</div><button id="end" class="endButton">終了</button></div>
+</div>
+<button id="end" class="endButton">終了</button>
 <div class="muted">自動送信間隔は設定で変更できます。読み損なった場合は停止し、−10 / ← で戻して再開できます。</div>
 </section>
 <section id="receive" class="page">
@@ -61,9 +73,33 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div class="row"><button id="copy" class="hidden">コピー</button><button id="save" class="hidden">ファイル保存</button><button id="stop">閉じる</button></div>
 </section>
 <section id="settings" class="page">
-<div class="card"><label>ブロックサイズ　<select id="block"><option>64</option><option>128</option><option>256</option><option selected>512</option></select> B</label></div>
-<div class="card"><label>誤り訂正　<select id="ecc"><option>L</option><option selected>M</option><option>Q</option><option>H</option></select></label>
-<p class="muted">高くすると読み取り耐性が上がりますが、QRコードが高密度になります。</p></div>
+<div class="card">
+  <label>ブロックサイズ　
+    <select id="block">
+      <option>64</option><option>128</option><option>256</option><option selected>512</option>
+    </select> B
+  </label>
+</div>
+<div class="card">
+  <label>自動送信間隔　
+    <select id="autoInterval">
+      <option value="100">0.1秒</option>
+      <option value="200">0.2秒</option>
+      <option value="300">0.3秒</option>
+      <option value="400" selected>0.4秒</option>
+      <option value="500">0.5秒</option>
+      <option value="1000">1.0秒</option>
+    </select>
+  </label>
+</div>
+<div class="card">
+  <label>誤り訂正　
+    <select id="ecc">
+      <option>L</option><option selected>M</option><option>Q</option><option>H</option>
+    </select>
+  </label>
+  <p class="muted">高くすると読み取り耐性が上がりますが、QRコードが高密度になります。</p>
+</div>
 <div class="card"><b>プロトコル</b><p class="muted">Start Magic 4B / Version 1B / Type 1B / Total 1B / Block 1B<br>継続: Short Magic 2B / Block 1B</p></div>
 </section>
 </main>
