@@ -34,7 +34,7 @@ function startAuto(){
   if(!blocks.length||autoRunning)return;
   autoRunning=true;
   const b=$("autoToggle"); if(b)b.textContent="⏸ 停止";
-  const intervalMs=parseInt(($("autoInterval")&&$("autoInterval").value)||localStorage.autoInterval||"100",10);
+  const intervalMs=parseInt(($("autoInterval")&&$("autoInterval").value)||localStorage.autoInterval||"200",10);
   autoTimer=setInterval(()=>{
     if(blockIndex>=blocks.length-1){stopAuto();return}
     blockIndex++;
@@ -62,6 +62,7 @@ async function startCamera(){
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});
     v.srcObject=stream;
     await v.play();
+    startCameraPeriodMeasurement(v);
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
     scanEnableAt=performance.now()+400;
     scan();
@@ -111,4 +112,26 @@ $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";
 if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(console.error));
 
 if($("autoInterval"))$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value};
+
+function measureDisplayPeriod(){
+ const o=$("displayDiag"); if(!o)return; o.textContent="測定中…";
+ let a=[],last=performance.now(),start=last;
+ function f(now){let d=now-last;last=now;if(d>0&&d<100)a.push(d);
+  if(now-start<1800)return requestAnimationFrame(f);
+  if(a.length){a.sort((x,y)=>x-y);let d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} Hz / ${d.toFixed(1)} ms`;}
+ }
+ requestAnimationFrame(f);
+}
+function startCameraPeriodMeasurement(v){
+ const o=$("cameraDiag");if(!o||!v)return;
+ if(typeof v.requestVideoFrameCallback!=="function"){o.textContent="測定非対応";return;}
+ o.textContent="測定中…";let a=[],last=null,start=performance.now();
+ function f(now,m){if(last!==null){let d=(m.mediaTime-last)*1000;if(d>0&&d<200)a.push(d)}last=m.mediaTime;
+  if(performance.now()-start<2200&&v.srcObject)return v.requestVideoFrameCallback(f);
+  if(a.length){a.sort((x,y)=>x-y);let d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} fps / ${d.toFixed(1)} ms`;}
+ }
+ v.requestVideoFrameCallback(f);
+}
+
+if($("measureDisplay"))$("measureDisplay").onclick=measureDisplayPeriod;
 })();
