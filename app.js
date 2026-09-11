@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
 let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false;
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]), VERSION=1;
-function go(id){stopAuto();stopCamera();pages.forEach(p=>p.classList.toggle("active",p.id===id));current=id;back.classList.toggle("hidden",id==="home");title.textContent=id==="home"?"QR通信":({send:"送る",show:"送信",receive:"受ける",settings:"設定"}[id]||"QR通信");if(id==="receive"){resetReceiveState();startCamera();}}
+function go(id){stopAuto();stopCamera();pages.forEach(p=>p.classList.toggle("active",p.id===id));current=id;back.classList.toggle("hidden",id==="home");const sh=$("settingsHome");if(sh)sh.classList.toggle("hidden",id!=="home");title.textContent=id==="home"?"QR通信":({send:"送る",show:"送信",receive:"受ける",settings:"設定"}[id]||"QR通信");if(id==="receive"){resetReceiveState();startCamera();}}
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));back.onclick=()=>go("home");$("end").onclick=()=>{stopAuto();go("home")};$("stop").onclick=()=>go("home");
 function resetReceiveState(){
   recv=null; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;

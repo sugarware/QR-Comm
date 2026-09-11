@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.42</title>
+<title>QR通信 v0.43</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -146,12 +146,76 @@ select,input,textarea{
 }
 </style>
 <link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+/* v0.43 secondary-screen color treatment */
+header #settingsHome{
+  left:auto !important;
+  right:10px !important;
+  top:50% !important;
+  transform:translateY(-50%) !important;
+  width:44px !important;
+  height:44px !important;
+  min-height:44px !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:13px !important;
+  background:#edf6ff !important;
+  color:#2f85ee !important;
+  font-size:27px !important;
+  line-height:1 !important;
+  box-shadow:none !important;
+}
+#send .row button,
+#receive .row button,
+#settings button{
+  background:#eef7ff !important;
+  border-color:#cfe4f5 !important;
+  color:#205f99 !important;
+}
+#send #commQR{
+  background:#dceeff !important;
+  border-color:#acd3f6 !important;
+  color:#135f9f !important;
+}
+#send #fileBtn{
+  background:#edf8f3 !important;
+  border-color:#ccebdd !important;
+  color:#237554 !important;
+}
+#show .manualControls button{
+  background:#eef7ff !important;
+  border-color:#cfe4f5 !important;
+  color:#205f99 !important;
+}
+#show .endButton{
+  background:#fff1f1 !important;
+  border-color:#efcece !important;
+  color:#aa3d3d !important;
+}
+#receive #copy,#receive #save{
+  background:#edf8f3 !important;
+  border-color:#ccebdd !important;
+  color:#237554 !important;
+}
+#receive #stop{
+  background:#eef7ff !important;
+  border-color:#cfe4f5 !important;
+  color:#205f99 !important;
+}
+#settings .card{
+  background:#f7fbff !important;
+  border:1px solid #deecf7 !important;
+}
+#settings select{
+  background:#ffffff !important;
+}
+</style>
 </head>
 <body>
-<header><button id="back" class="hidden">＜ 戻る</button><span id="title">QR通信</span></header>
+<header><button id="back" class="hidden">＜ 戻る</button><span id="title">QR通信</span><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button></header>
 <main>
-<section id="home" class="page active home"><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button>
-<button class="big" data-go="send">送る</button><button class="big" data-go="receive">受ける</button>
+<section id="home" class="page active home"><button class="big" data-go="send">送る</button><button class="big" data-go="receive">受ける</button>
 
 </section>
 <section id="send" class="page">
