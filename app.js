@@ -123,14 +123,70 @@ function measureDisplayPeriod(){
  requestAnimationFrame(f);
 }
 function startCameraPeriodMeasurement(v){
- const o=$("cameraDiag");if(!o||!v)return;
- if(typeof v.requestVideoFrameCallback!=="function"){o.textContent="測定非対応";return;}
- o.textContent="測定中…";let a=[],last=null,start=performance.now();
- function f(now,m){if(last!==null){let d=(m.mediaTime-last)*1000;if(d>0&&d<200)a.push(d)}last=m.mediaTime;
-  if(performance.now()-start<2200&&v.srcObject)return v.requestVideoFrameCallback(f);
-  if(a.length){a.sort((x,y)=>x-y);let d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} fps / ${d.toFixed(1)} ms`;}
- }
- v.requestVideoFrameCallback(f);
+  const o=$("cameraDiag");
+  if(!o||!v) return;
+  o.textContent="測定中…";
+
+  let finished=false;
+  const finish=(fps)=>{
+    if(finished) return;
+    finished=true;
+    if(Number.isFinite(fps) && fps>1){
+      const ms=1000/fps;
+      o.textContent=`${fps.toFixed(1)} fps / ${ms.toFixed(1)} ms`;
+    }else{
+      o.textContent="測定できません";
+    }
+  };
+
+  // Primary: count actual video-frame callbacks using wall-clock time.
+  if(typeof v.requestVideoFrameCallback==="function"){
+    let count=0;
+    let first=null;
+    let last=null;
+    const cb=(now,meta)=>{
+      if(finished) return;
+      if(first===null) first=now;
+      last=now;
+      count++;
+      if(now-first>=2200){
+        const elapsed=(last-first)/1000;
+        finish(elapsed>0 ? (count-1)/elapsed : NaN);
+        return;
+      }
+      v.requestVideoFrameCallback(cb);
+    };
+    v.requestVideoFrameCallback(cb);
+
+    // Safari fallback: if callback remains stalled, switch method.
+    setTimeout(()=>{
+      if(!finished && count<3) measureCameraByCurrentTime(v,finish);
+    },2600);
+    return;
+  }
+
+  measureCameraByCurrentTime(v,finish);
+}
+
+function measureCameraByCurrentTime(v,finish){
+  let changes=0;
+  let lastTime=v.currentTime;
+  const start=performance.now();
+  let lastChange=start;
+  function poll(now){
+    if(v.currentTime!==lastTime){
+      lastTime=v.currentTime;
+      changes++;
+      lastChange=now;
+    }
+    if(now-start>=2500){
+      const elapsed=(now-start)/1000;
+      finish(changes/elapsed);
+      return;
+    }
+    requestAnimationFrame(poll);
+  }
+  requestAnimationFrame(poll);
 }
 
 if($("measureDisplay"))$("measureDisplay").onclick=measureDisplayPeriod;
