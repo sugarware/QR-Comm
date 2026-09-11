@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.4</title>
+<title>QR通信 v0.41</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -79,13 +79,19 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #receiveBlockStatus{margin-top:10px}
 </style>
 
-</head>
+<style>
+#cameraFrame{width:100%!important;max-width:560px!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important}
+#qrCanvas{width:100%!important;max-width:560px!important;height:auto!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important}
+#homeHeader{position:relative;min-height:82px;display:flex;align-items:center;justify-content:center;background:#fff;border-bottom:1px solid #dfe5ec}
+#homeHeader h1{margin:0;text-align:center}
+#settingsHome{position:absolute!important;right:10px!important;top:50%!important;transform:translateY(-50%)!important;width:52px!important;height:52px!important;min-height:52px!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:30px!important;line-height:1!important}
+</style></head>
 <body>
 <header><button id="back" class="hidden">＜ 戻る</button><span id="title">QR通信</span></header>
 <main>
-<section id="home" class="page active home">
+<section id="home" class="page active home"><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button>
 <button class="big" data-go="send">送る</button><button class="big" data-go="receive">受ける</button>
-<button style="float:right" data-go="settings">⚙︎ 設定</button>
+
 </section>
 <section id="send" class="page">
 <textarea id="text" placeholder="ここに文章を入力 または貼り付け"></textarea>
@@ -147,4 +153,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div class="settingsGroup"><h3>診断</h3><div id="diagBox"><div>画面更新: <span id="displayDiag">未測定</span></div><div>カメラ: <span id="cameraDiag">受信画面で測定</span></div></div><button id="measureDisplay" type="button">画面周期を測定</button><div class="muted">ブラウザから見た実効周期です。</div></div></section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="app.js"></script>
-</body></html>
+</body></html><style>
+#home{position:relative}
+#settingsHome{position:absolute!important;right:12px!important;top:12px!important;width:48px!important;height:48px!important;min-height:48px!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:28px!important;line-height:1!important;z-index:2}
+</style>
