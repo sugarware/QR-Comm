@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信</title>
+<title>QR通信 v0.2</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -32,7 +32,7 @@ select,input[type=number]{font:inherit;padding:10px;border-radius:10px;border:1p
 <section id="show" class="page">
 <div id="sendStatus" class="status"></div><canvas id="qrCanvas" width="600" height="600"></canvas>
 <div id="waitText" class="status"></div><div class="row"><button id="prev">←</button><button id="next">→</button><button id="end">終了</button></div>
-<div class="muted">※ 初期試作版：QR通信のブロック切替は手動確認用。音ACK/NAKは次段階で実装します。</div>
+<div class="muted">QR通信は ← / → でブロックを切り替えます。実機評価では手動方式を基本とします。</div>
 </section>
 <section id="receive" class="page">
 <video id="video" playsinline muted></video><canvas id="scanCanvas" hidden></canvas>
@@ -42,7 +42,7 @@ select,input[type=number]{font:inherit;padding:10px;border-radius:10px;border:1p
 <div class="row"><button id="copy" class="hidden">コピー</button><button id="save" class="hidden">ファイル保存</button><button id="stop">閉じる</button></div>
 </section>
 <section id="settings" class="page">
-<div class="card"><label>ブロックサイズ　<select id="block"><option>64</option><option selected>128</option><option>256</option><option>512</option></select> B</label></div>
+<div class="card"><label>ブロックサイズ　<select id="block"><option>64</option><option>128</option><option>256</option><option selected>512</option></select> B</label></div>
 <div class="card"><label>誤り訂正　<select id="ecc"><option>L</option><option selected>M</option><option>Q</option><option>H</option></select></label>
 <p class="muted">高くすると読み取り耐性が上がりますが、QRコードが高密度になります。</p></div>
 <div class="card"><b>プロトコル</b><p class="muted">Start Magic 4B / Version 1B / Type 1B / Total 1B / Block 1B<br>継続: Short Magic 2B / Block 1B</p></div>
