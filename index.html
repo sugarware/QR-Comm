@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.3</title>
+<title>QR通信 v0.31</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -23,8 +23,8 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .blockStatus .label{font-size:20px}
 .blockStatus .current{font-size:42px;line-height:1}
 .blockStatus .total{font-size:26px}
-.transferControls{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:10px;margin:14px 0}
-.transferControls button{min-height:68px;font-size:28px;font-weight:700;border-radius:14px}
+.transferControls{display:grid;grid-template-columns:1fr 1fr 1.5fr 1fr;gap:8px;margin:14px 0}
+.transferControls button{min-height:72px;font-size:26px;font-weight:700;border-radius:14px;padding:0 8px}
 #autoToggle{font-size:22px}
 #receiveBlockStatus{margin-top:10px}
 </style>
@@ -45,12 +45,12 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 </section>
 <section id="show" class="page">
 <div id="sendStatus" class="status"></div><canvas id="qrCanvas" width="600" height="600"></canvas>
-<div id="waitText" class="status"></div><div class="row"><div class="transferControls"><button id="prev">←</button><button id="autoToggle">▶ 自動</button><button id="next">→</button></div><button id="end">終了</button></div>
-<div class="muted">QR通信は ← / → でブロックを切り替えます。実機評価では手動方式を基本とします。</div>
+<div id="waitText" class="status"></div><div class="row"><div class="transferControls"><button id="back10">−10</button><button id="prev">←</button><button id="autoToggle">▶ 自動</button><button id="next">→</button></div><button id="end">終了</button></div>
+<div class="muted">自動送信は0.4秒/ブロック。読み損なった場合は停止し、−10 / ← で戻して再開できます。</div>
 </section>
 <section id="receive" class="page">
 <video id="video" playsinline muted></video><canvas id="scanCanvas" hidden></canvas>
-<div id="recvStatus" class="status">QRコードを映してください</div>
+<div id="receiveBlockStatus" class="blockStatus hidden"></div><div id="recvStatus" class="status">QRコードを映してください</div>
 <div class="progress"><div id="bar"></div></div>
 <div id="result" class="card hidden"></div>
 <div class="row"><button id="copy" class="hidden">コピー</button><button id="save" class="hidden">ファイル保存</button><button id="stop">閉じる</button></div>
