@@ -34,7 +34,7 @@ function startAuto(){
   if(!blocks.length||autoRunning)return;
   autoRunning=true;
   const b=$("autoToggle"); if(b)b.textContent="⏸ 停止";
-  const intervalMs=parseInt(($("autoInterval")&&$("autoInterval").value)||localStorage.autoInterval||"400",10);
+  const intervalMs=parseInt(($("autoInterval")&&$("autoInterval").value)||localStorage.autoInterval||"100",10);
   autoTimer=setInterval(()=>{
     if(blockIndex>=blocks.length-1){stopAuto();return}
     blockIndex++;
@@ -69,13 +69,19 @@ async function startCamera(){
 }
 function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;const v=$("video");try{v.pause()}catch(e){};if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0;}
 function scan(){
-  let v=$("video"),c=$("scanCanvas"),ctx=c.getContext("2d",{willReadFrequently:true});
+  const v=$("video"), c=$("scanCanvas"), ctx=c.getContext("2d",{willReadFrequently:true});
   if(performance.now()>=scanEnableAt && v.readyState>=2 && v.videoWidth>0 && v.videoHeight>0){
-    c.width=v.videoWidth;c.height=v.videoHeight;
-    ctx.clearRect(0,0,c.width,c.height);
-    ctx.drawImage(v,0,0,c.width,c.height);
-    let im=ctx.getImageData(0,0,c.width,c.height),
-        code=window.jsQR&&jsQR(im.data,c.width,c.height,{inversionAttempts:"dontInvert"});
+    const side=Math.min(v.videoWidth,v.videoHeight);
+    const sx=Math.floor((v.videoWidth-side)/2);
+    const sy=Math.floor((v.videoHeight-side)/2);
+
+    c.width=side;
+    c.height=side;
+    ctx.clearRect(0,0,side,side);
+    ctx.drawImage(v,sx,sy,side,side,0,0,side,side);
+
+    const im=ctx.getImageData(0,0,side,side);
+    const code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"});
     if(code) handleDecoded(code);
   }
   scanRAF=requestAnimationFrame(scan);

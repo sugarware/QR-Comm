@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.32</title>
+<title>QR通信 v0.33</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -21,6 +21,31 @@ select,input[type=number]{font:inherit;padding:10px;border-radius:10px;border:1p
 .manualControls{display:flex;justify-content:center;gap:12px;margin:8px 0 12px}
 .manualControls button{min-width:78px;min-height:46px;font-size:20px;font-weight:600;border-radius:10px}
 .endButton{display:block;width:100%;min-height:52px;margin-top:10px;font-size:20px;font-weight:700;border-radius:12px}
+
+
+#cameraFrame{
+  width:min(92vw,560px);
+  aspect-ratio:1/1;
+  margin:10px auto;
+  overflow:hidden;
+  border-radius:16px;
+  background:#000;
+  position:relative;
+}
+#cameraFrame video{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+#cameraGuide{
+  position:absolute;
+  inset:0;
+  border:4px solid rgba(255,255,255,.85);
+  border-radius:16px;
+  pointer-events:none;
+  box-sizing:border-box;
+}
 
 </style>
 <style>
@@ -63,10 +88,10 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   <button id="next">→</button>
 </div>
 <button id="end" class="endButton">終了</button>
-<div class="muted">自動送信間隔は設定で変更できます。読み損なった場合は停止し、−10 / ← で戻して再開できます。</div>
+<div class="muted">自動送信間隔とPayloadサイズは設定で変更できます。読み損なった場合は停止し、−10 / ← で戻して再開できます。</div>
 </section>
 <section id="receive" class="page">
-<video id="video" playsinline muted></video><canvas id="scanCanvas" hidden></canvas>
+<div id="cameraFrame"><video id="video" playsinline></video><div id="cameraGuide"></div></div><canvas id="scanCanvas" hidden></canvas>
 <div id="receiveBlockStatus" class="blockStatus hidden"></div><div id="recvStatus" class="status">QRコードを映してください</div>
 <div class="progress"><div id="bar"></div></div>
 <div id="result" class="card hidden"></div>
@@ -76,7 +101,7 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 <div class="card">
   <label>ブロックサイズ　
     <select id="block">
-      <option>64</option><option>128</option><option>256</option><option selected>512</option>
+      <option>64</option><option>128</option><option>256</option><option selected>512</option><option>768</option><option>1024</option>
     </select> B
   </label>
 </div>
