@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.31</title>
+<title>QR通信 v0.32</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -15,7 +15,7 @@ textarea{width:100%;min-height:220px;font-size:18px;padding:14px;border:1px soli
 video{width:100%;max-height:58vh;background:#111;border-radius:14px;object-fit:cover}.status{text-align:center;font-size:18px;margin:12px}.progress{height:10px;background:#ddd;border-radius:9px;overflow:hidden}.progress>div{height:100%;background:#111;width:0}
 select,input[type=number]{font:inherit;padding:10px;border-radius:10px;border:1px solid #bbb}
 .hidden{display:none!important}
-</style>
+.endButton{width:100%;min-height:52px;margin-top:10px;font-size:20px;font-weight:700;border-radius:12px}</style>
 <style>
 html,body{touch-action:manipulation;overscroll-behavior:none}
 button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -23,11 +23,11 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .blockStatus .label{font-size:20px}
 .blockStatus .current{font-size:42px;line-height:1}
 .blockStatus .total{font-size:26px}
-.transferControls{display:grid;grid-template-columns:1fr 1fr 1.5fr 1fr;gap:8px;margin:14px 0}
-.transferControls button{min-height:72px;font-size:26px;font-weight:700;border-radius:14px;padding:0 8px}
+.autoControlWrap{margin:12px 0 10px}.autoControlWrap button{width:100%;min-height:76px;font-size:26px;font-weight:700;border-radius:16px}.manualControls{display:flex;justify-content:center;gap:12px;margin:8px 0 14px}.manualControls button{min-width:78px;min-height:46px;font-size:20px;font-weight:600;border-radius:10px}
+
 #autoToggle{font-size:22px}
 #receiveBlockStatus{margin-top:10px}
-</style>
+.endButton{width:100%;min-height:52px;margin-top:10px;font-size:20px;font-weight:700;border-radius:12px}</style>
 
 </head>
 <body>
@@ -45,8 +45,13 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 </section>
 <section id="show" class="page">
 <div id="sendStatus" class="status"></div><canvas id="qrCanvas" width="600" height="600"></canvas>
-<div id="waitText" class="status"></div><div class="row"><div class="transferControls"><button id="back10">−10</button><button id="prev">←</button><button id="autoToggle">▶ 自動</button><button id="next">→</button></div><button id="end">終了</button></div>
-<div class="muted">自動送信は0.4秒/ブロック。読み損なった場合は停止し、−10 / ← で戻して再開できます。</div>
+<div id="waitText" class="status"></div><div class="row"><div class="autoControlWrap"><button id="autoToggle">▶ 自動送信</button></div>
+<div class="manualControls">
+  <button id="back10">−10</button>
+  <button id="prev">←</button>
+  <button id="next">→</button>
+</div><button id="end" class="endButton">終了</button></div>
+<div class="muted">自動送信間隔は設定で変更できます。読み損なった場合は停止し、−10 / ← で戻して再開できます。</div>
 </section>
 <section id="receive" class="page">
 <video id="video" playsinline muted></video><canvas id="scanCanvas" hidden></canvas>

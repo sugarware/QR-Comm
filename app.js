@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".p
 let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false;
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]), VERSION=1;
 function go(id){stopAuto();stopCamera();pages.forEach(p=>p.classList.toggle("active",p.id===id));current=id;back.classList.toggle("hidden",id==="home");title.textContent=id==="home"?"QR通信":({send:"送る",show:"送信",receive:"受ける",settings:"設定"}[id]||"QR通信");if(id==="receive"){resetReceiveState();startCamera();}}
-document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));back.onclick=()=>go("home");$("end").onclick=()=>go("home");$("stop").onclick=()=>go("home");
+document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));back.onclick=()=>go("home");$("end").onclick=()=>{stopAuto();go("home")};$("stop").onclick=()=>go("home");
 function resetReceiveState(){
   recv=null; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
   $("recvStatus").textContent="QRコードを映してください"; const rbs=$("receiveBlockStatus"); if(rbs){rbs.classList.add("hidden");rbs.innerHTML="";}
@@ -28,17 +28,18 @@ function stopAuto(){
   if(autoTimer){clearInterval(autoTimer);autoTimer=null}
   autoRunning=false;
   const b=$("autoToggle");
-  if(b){b.textContent="▶ 自動";b.disabled=!blocks.length}
+  if(b){b.textContent="▶ 自動送信";b.disabled=!blocks.length}
 }
 function startAuto(){
   if(!blocks.length||autoRunning)return;
   autoRunning=true;
   const b=$("autoToggle"); if(b)b.textContent="⏸ 停止";
+  const intervalMs=parseInt($("autoInterval")?.value||localStorage.autoInterval||"400",10);
   autoTimer=setInterval(()=>{
     if(blockIndex>=blocks.length-1){stopAuto();return}
     blockIndex++;
     renderBlock();
-  },400);
+  },intervalMs);
 }
 function toggleAuto(){autoRunning?stopAuto():startAuto()}
 
@@ -103,3 +104,5 @@ function download(bytes,name,type){let u=URL.createObjectURL(new Blob([bytes],{t
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(console.error));
 })();
+
+if($("autoInterval"))$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value};
