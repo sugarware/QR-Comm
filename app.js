@@ -1,11 +1,11 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
-let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, lastBarcodeScanAt=0, barcodeReader=null, normalResultText="";
+let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, lastBarcodeScanAt=0, barcodeReader=null, barcodeDetector=null, barcodeDetectorInit=false, barcodeDetectBusy=false, normalResultText="";
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]), VERSION=1;
 function go(id){stopAuto();stopCamera();pages.forEach(p=>p.classList.toggle("active",p.id===id));current=id;back.classList.toggle("hidden",id==="home");const sh=$("settingsHome");if(sh)sh.classList.toggle("hidden",id!=="home");title.textContent=id==="home"?"QR通信":({send:"送信 / 表示",show:"送信",receive:"受信 / 読込",settings:"設定"}[id]||"QR通信");if(id==="receive"){resetReceiveState();startCamera();}}
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));back.onclick=()=>go("home");$("end").onclick=()=>{stopAuto();go("home")};$("stop").onclick=()=>go("home");
 function resetReceiveState(){
-  recv=null; scanning=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
+  recv=null; scanning=false; barcodeDetectBusy=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
   $("recvStatus").textContent="コードを認識枠内に合わせてください"; const startBtn=$("startRead"); if(startBtn){startBtn.classList.remove("hidden");startBtn.disabled=false;startBtn.textContent="読取開始";} const rbs=$("receiveBlockStatus"); if(rbs){rbs.classList.add("hidden");rbs.innerHTML="";}
   $("bar").style.width="0%";
   $("result").textContent=""; normalResultText="";
@@ -72,7 +72,7 @@ async function startCamera(){
     $("recvStatus").textContent="コードを認識枠内に合わせ、読取開始を押してください";
   }catch(e){$("recvStatus").textContent="カメラを開始できません: "+e.name}
 }
-function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;const v=$("video");try{v.pause()}catch(e){};if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0;}
+function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;barcodeDetectBusy=false;const v=$("video");try{v.pause()}catch(e){};if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0;}
 $("startRead").onclick=()=>{
   if(!stream)return;
   const b=$("startRead");
@@ -96,18 +96,50 @@ function initBarcodeReader(){
     else {barcodeReader=new ZXing.MultiFormatReader(); barcodeReader.setHints(hints);}
   }catch(e){console.warn("BAR reader init failed",e);barcodeReader=null}
 }
-function tryDecodeBarcode(canvas,im,w,h){
+async function initNativeBarcodeDetector(){
+  if(barcodeDetectorInit)return barcodeDetector;
+  barcodeDetectorInit=true;
+  if(!("BarcodeDetector" in window))return null;
+  try{
+    let wanted=["code_128","code_39","code_93","codabar","ean_13","ean_8","itf","upc_a","upc_e"];
+    if(typeof BarcodeDetector.getSupportedFormats==="function"){
+      const supported=await BarcodeDetector.getSupportedFormats();
+      wanted=wanted.filter(f=>supported.includes(f));
+    }
+    barcodeDetector=new BarcodeDetector(wanted.length?{formats:wanted}:undefined);
+  }catch(e){console.warn("BarcodeDetector init failed",e);barcodeDetector=null}
+  return barcodeDetector;
+}
+function cloneCanvas(src){
+  const c=document.createElement("canvas"); c.width=src.width;c.height=src.height;
+  c.getContext("2d").drawImage(src,0,0); return c;
+}
+async function tryDecodeBarcode(canvas,im,w,h){
+  // IDポータル同様、利用可能な環境ではブラウザ標準 BarcodeDetector を優先する。
+  // 入力は認識枠を切り出した canvas だけなので、枠外は検出対象にならない。
+  const detector=await initNativeBarcodeDetector();
+  if(detector){
+    try{
+      const found=await detector.detect(canvas);
+      if(found&&found.length){
+        const r=found[0], text=String(r.rawValue??"");
+        if(text)return {data:text,format:String(r.format||""),snapshot:canvas};
+      }
+    }catch(e){}
+  }
+  // BarcodeDetector 非対応時は ZXing にフォールバック。
   initBarcodeReader(); if(!barcodeReader)return null;
   try{
     let r=null;
-    if(barcodeReader.decodeFromCanvas) r=barcodeReader.decodeFromCanvas(canvas);
-    else {
+    if(barcodeReader.decodeFromCanvas){
+      r=barcodeReader.decodeFromCanvas(canvas);
+      if(r&&typeof r.then==="function")r=await r;
+    }else{
       const src=new ZXing.RGBLuminanceSource(im.data,w,h);
       const bitmap=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
       r=barcodeReader.decodeWithState(bitmap);
     }
     if(!r)return null;
-    // ZXing のビルド差を吸収して必ず文字列として取り出す
     let text="";
     if(typeof r.getText==="function") text=r.getText();
     else if(typeof r.text==="string"||typeof r.text==="number") text=r.text;
@@ -115,12 +147,10 @@ function tryDecodeBarcode(canvas,im,w,h){
       const raw=r.getRawBytes();
       if(raw&&raw.length) text=new TextDecoder().decode(new Uint8Array(raw));
     }
-    if(text===undefined||text===null)return null;
-    text=String(text);
-    if(!text.length)return null;
+    text=String(text??""); if(!text.length)return null;
     let fmt="";
     try{fmt=typeof r.getBarcodeFormat==="function"?String(r.getBarcodeFormat()):String(r.barcodeFormat||"")}catch(_e){}
-    return {data:text,format:fmt,resultPoints:(r.getResultPoints&&r.getResultPoints())||[]};
+    return {data:text,format:fmt,snapshot:canvas};
   }catch(e){return null}
 }
 function scan(){
@@ -134,16 +164,21 @@ function scan(){
     const im=ctx.getImageData(0,0,side,side);
     const code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"});
     if(code) handleDecoded(code);
-    else if(!recv && performance.now()-lastBarcodeScanAt>=180){
+    else if(!recv && !barcodeDetectBusy && performance.now()-lastBarcodeScanAt>=180){
       lastBarcodeScanAt=performance.now();
-      const bar=tryDecodeBarcode(c,im,side,side);
-      if(bar)handleBarcodeDecoded(bar);
+      barcodeDetectBusy=true;
+      const snapshot=cloneCanvas(c);
+      const sim=snapshot.getContext("2d",{willReadFrequently:true}).getImageData(0,0,snapshot.width,snapshot.height);
+      tryDecodeBarcode(snapshot,sim,snapshot.width,snapshot.height).then(bar=>{
+        barcodeDetectBusy=false;
+        if(bar && scanning && !recv)handleBarcodeDecoded(bar);
+      }).catch(()=>{barcodeDetectBusy=false});
     }
   }
   if(scanning)scanRAF=requestAnimationFrame(scan);
 }
-function captureRecognized(code){
-  const src=$("scanCanvas"), dst=$("capturedCanvas"), v=$("video"), guide=$("cameraGuide");
+function captureRecognized(code,sourceCanvas=null){
+  const src=sourceCanvas||$("scanCanvas"), dst=$("capturedCanvas"), v=$("video"), guide=$("cameraGuide");
   if(!src||!dst||!src.width)return;
   let x=0,y=0,w=src.width,h=src.height;
   if(code&&code.location){
@@ -155,7 +190,7 @@ function captureRecognized(code){
 }
 function handleBarcodeDecoded(code){
   const t=code.data||""; if(!t)return;
-  captureRecognized(null);
+  captureRecognized(null,code.snapshot||null);
   showNormal(t,"BARコード");
 }
 function rawBytes(code){if(code.binaryData)return new Uint8Array(code.binaryData);return new TextEncoder().encode(code.data||"")}
