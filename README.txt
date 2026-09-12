@@ -1,4 +1,4 @@
-QR通信 v0.47 PWA
+QR通信 v0.48 PWA
 
 変更点:
 - BARコード読取を BarcodeDetector 優先 + ZXing フォールバックへ変更
@@ -19,3 +19,6 @@ QR通信 v0.46
 - 表示・コピー・保存で同一の受信文字列を使用
 - iOS向けコピー処理フォールバック追加
 - Service Workerのキャッシュ対象を実在ファイルに修正
+
+
+v0.48: BARコード読取をIDポータルと同じ html5-qrcode 2.3.8 に統一。ヘッダにバージョン常時表示。更新時はHTML/JSをnetwork-first化。

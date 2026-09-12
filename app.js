@@ -1,6 +1,6 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
-let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, lastBarcodeScanAt=0, barcodeReader=null, barcodeDetector=null, barcodeDetectorInit=false, barcodeDetectBusy=false, normalResultText="";
+let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, lastBarcodeScanAt=0, html5BarcodeScanner=null, barcodeDetectBusy=false, normalResultText="";
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]), VERSION=1;
 function go(id){stopAuto();stopCamera();pages.forEach(p=>p.classList.toggle("active",p.id===id));current=id;back.classList.toggle("hidden",id==="home");const sh=$("settingsHome");if(sh)sh.classList.toggle("hidden",id!=="home");title.textContent=id==="home"?"QR通信":({send:"送信 / 表示",show:"送信",receive:"受信 / 読込",settings:"設定"}[id]||"QR通信");if(id==="receive"){resetReceiveState();startCamera();}}
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));back.onclick=()=>go("home");$("end").onclick=()=>{stopAuto();go("home")};$("stop").onclick=()=>go("home");
@@ -87,70 +87,49 @@ $("startRead").onclick=()=>{
     if(scanning){b.classList.add("hidden");$("recvStatus").textContent="読取中…";}
   },300);
 };
-function initBarcodeReader(){
-  if(barcodeReader||!window.ZXing)return;
+function initHtml5BarcodeScanner(){
+  if(html5BarcodeScanner || !window.Html5Qrcode)return html5BarcodeScanner;
   try{
-    const formats=[ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.CODE_93,ZXing.BarcodeFormat.CODABAR,ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.ITF,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,ZXing.BarcodeFormat.RSS_14,ZXing.BarcodeFormat.RSS_EXPANDED].filter(v=>v!==undefined);
-    const hints=new Map(); hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,formats);
-    if(ZXing.BrowserMultiFormatReader) barcodeReader=new ZXing.BrowserMultiFormatReader(hints);
-    else {barcodeReader=new ZXing.MultiFormatReader(); barcodeReader.setHints(hints);}
-  }catch(e){console.warn("BAR reader init failed",e);barcodeReader=null}
-}
-async function initNativeBarcodeDetector(){
-  if(barcodeDetectorInit)return barcodeDetector;
-  barcodeDetectorInit=true;
-  if(!("BarcodeDetector" in window))return null;
-  try{
-    let wanted=["code_128","code_39","code_93","codabar","ean_13","ean_8","itf","upc_a","upc_e"];
-    if(typeof BarcodeDetector.getSupportedFormats==="function"){
-      const supported=await BarcodeDetector.getSupportedFormats();
-      wanted=wanted.filter(f=>supported.includes(f));
-    }
-    barcodeDetector=new BarcodeDetector(wanted.length?{formats:wanted}:undefined);
-  }catch(e){console.warn("BarcodeDetector init failed",e);barcodeDetector=null}
-  return barcodeDetector;
+    const F=window.Html5QrcodeSupportedFormats;
+    const formats=F ? [F.CODE_128,F.CODE_39,F.CODE_93,F.CODABAR,F.EAN_13,F.EAN_8,F.ITF,F.UPC_A,F.UPC_E].filter(v=>v!==undefined) : undefined;
+    html5BarcodeScanner=new Html5Qrcode("html5BarcodeReader", formats?{formatsToSupport:formats,verbose:false}:{verbose:false});
+  }catch(e){console.warn("html5-qrcode BAR reader init failed",e);html5BarcodeScanner=null}
+  return html5BarcodeScanner;
 }
 function cloneCanvas(src){
   const c=document.createElement("canvas"); c.width=src.width;c.height=src.height;
   c.getContext("2d").drawImage(src,0,0); return c;
 }
-async function tryDecodeBarcode(canvas,im,w,h){
-  // IDポータル同様、利用可能な環境ではブラウザ標準 BarcodeDetector を優先する。
-  // 入力は認識枠を切り出した canvas だけなので、枠外は検出対象にならない。
-  const detector=await initNativeBarcodeDetector();
-  if(detector){
-    try{
-      const found=await detector.detect(canvas);
-      if(found&&found.length){
-        const r=found[0], text=String(r.rawValue??"");
-        if(text)return {data:text,format:String(r.format||""),snapshot:canvas};
-      }
-    }catch(e){}
-  }
-  // BarcodeDetector 非対応時は ZXing にフォールバック。
-  initBarcodeReader(); if(!barcodeReader)return null;
+function canvasToJpegFile(canvas){
+  return new Promise(resolve=>{
+    canvas.toBlob(blob=>resolve(blob?new File([blob],"scan.jpg",{type:"image/jpeg"}):null),"image/jpeg",0.92);
+  });
+}
+function html5FormatName(result){
   try{
-    let r=null;
-    if(barcodeReader.decodeFromCanvas){
-      r=barcodeReader.decodeFromCanvas(canvas);
-      if(r&&typeof r.then==="function")r=await r;
+    return String(result?.result?.format?.formatName || result?.result?.format?.format || result?.format?.formatName || result?.format || "");
+  }catch(e){return ""}
+}
+async function tryDecodeBarcode(canvas){
+  // IDポータルと同じ html5-qrcode を使用する。
+  // 入力画像は認識枠の切り出しだけなので、枠外のコードは探索しない。
+  const scanner=initHtml5BarcodeScanner();
+  if(!scanner)return null;
+  const file=await canvasToJpegFile(canvas);
+  if(!file)return null;
+  try{
+    let text="", format="";
+    if(typeof scanner.scanFileV2==="function"){
+      const result=await scanner.scanFileV2(file,false);
+      text=String(result?.decodedText||"");
+      format=html5FormatName(result);
     }else{
-      const src=new ZXing.RGBLuminanceSource(im.data,w,h);
-      const bitmap=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
-      r=barcodeReader.decodeWithState(bitmap);
+      text=String(await scanner.scanFile(file,false)||"");
     }
-    if(!r)return null;
-    let text="";
-    if(typeof r.getText==="function") text=r.getText();
-    else if(typeof r.text==="string"||typeof r.text==="number") text=r.text;
-    else if(typeof r.getRawBytes==="function"){
-      const raw=r.getRawBytes();
-      if(raw&&raw.length) text=new TextDecoder().decode(new Uint8Array(raw));
-    }
-    text=String(text??""); if(!text.length)return null;
-    let fmt="";
-    try{fmt=typeof r.getBarcodeFormat==="function"?String(r.getBarcodeFormat()):String(r.barcodeFormat||"")}catch(_e){}
-    return {data:text,format:fmt,snapshot:canvas};
+    if(!text)return null;
+    // QRコードは既存のjsQR側で扱う。ここは1次元BARコードだけを受け付ける。
+    if(/QR_CODE|QR CODE|QR/i.test(format))return null;
+    return {data:text,format,snapshot:canvas};
   }catch(e){return null}
 }
 function scan(){
@@ -168,8 +147,7 @@ function scan(){
       lastBarcodeScanAt=performance.now();
       barcodeDetectBusy=true;
       const snapshot=cloneCanvas(c);
-      const sim=snapshot.getContext("2d",{willReadFrequently:true}).getImageData(0,0,snapshot.width,snapshot.height);
-      tryDecodeBarcode(snapshot,sim,snapshot.width,snapshot.height).then(bar=>{
+      tryDecodeBarcode(snapshot).then(bar=>{
         barcodeDetectBusy=false;
         if(bar && scanning && !recv)handleBarcodeDecoded(bar);
       }).catch(()=>{barcodeDetectBusy=false});
@@ -242,7 +220,7 @@ function finishRecv(){stopCamera();let data=concat(...recv.parts);$("recvStatus"
 function download(bytes,name,type){let u=URL.createObjectURL(new Blob([bytes],{type})),a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(console.error));
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=048").catch(console.error));
 
 if($("autoInterval"))$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value};
 

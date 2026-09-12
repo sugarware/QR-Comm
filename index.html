@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.47</title>
+<title>QR通信 v0.48</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -222,14 +222,14 @@ header #settingsHome{
 </style>
 </head>
 <body>
-<header><button id="back" class="hidden">＜ 戻る</button><span id="title">QR通信</span><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button></header>
+<header><button id="back" class="hidden">＜ 戻る</button><span id="title">QR通信 v0.48</span><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button></header>
 <main>
 <section id="home" class="page active home"><button class="big" data-go="send">送信 / 表示</button><button class="big" data-go="receive">受信 / 読込</button>
 <div class="homeUrlQR card">
   <canvas id="homeQR" width="360" height="360" aria-label="QR通信アプリURLのQRコード"></canvas>
   <div class="muted homeUrlText">https://sugarware.github.io/QR-Comm/</div>
 </div>
-<div class="muted" style="text-align:center;margin-top:12px;font-size:13px">QR通信 v0.47</div>
+
 </section>
 <section id="send" class="page">
 <textarea id="text" placeholder="ここに文章を入力 または貼り付け"></textarea>
@@ -253,7 +253,7 @@ header #settingsHome{
 <div id="showHelp" class="muted">自動送信間隔とPayloadサイズは設定で変更できます。読み損なった場合は停止し、−10 / ← で戻して再開できます。</div>
 </section>
 <section id="receive" class="page">
-<div id="cameraFrame"><video id="video" playsinline></video><canvas id="capturedCanvas" class="hidden"></canvas><div id="cameraGuide"></div></div><canvas id="scanCanvas" hidden></canvas>
+<div id="cameraFrame"><video id="video" playsinline></video><canvas id="capturedCanvas" class="hidden"></canvas><div id="cameraGuide"></div></div><canvas id="scanCanvas" hidden></canvas><div id="html5BarcodeReader" style="display:none"></div>
 <div id="receiveBlockStatus" class="blockStatus hidden"></div><div id="recvStatus" class="status">コードを認識枠内に合わせてください</div><div class="row"><button id="startRead" class="primary">読取開始</button></div>
 <div class="progress"><div id="bar"></div></div>
 <div id="result" class="card hidden"></div>
@@ -290,7 +290,7 @@ header #settingsHome{
 <div class="card"><b>プロトコル</b><p class="muted">Start Magic 4B / Version 1B / Type 1B / Total 1B / Block 1B<br>継続: Short Magic 2B / Block 1B</p></div>
 <div class="settingsGroup"><h3>診断</h3><div id="diagBox"><div>画面更新: <span id="displayDiag">未測定</span></div><div>カメラ: <span id="cameraDiag">受信画面で測定</span></div></div><button id="measureDisplay" type="button">画面周期を測定</button><div class="muted">ブラウザから見た実効周期です。</div></div></section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.23.0/umd/index.min.js"></script><script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><script src="app.js?v=048"></script>
 </body></html><style>
 #home{position:relative}
 #settingsHome{position:absolute!important;right:12px!important;top:12px!important;width:48px!important;height:48px!important;min-height:48px!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:28px!important;line-height:1!important;z-index:2}
