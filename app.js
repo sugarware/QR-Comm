@@ -1,11 +1,11 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
-let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, lastBarcodeScanAt=0, html5BarcodeScanner=null, barcodeDetectBusy=false, normalResultText="";
+let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, normalResultText="";
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]), VERSION=1;
 function go(id){stopAuto();stopCamera();pages.forEach(p=>p.classList.toggle("active",p.id===id));current=id;back.classList.toggle("hidden",id==="home");const sh=$("settingsHome");if(sh)sh.classList.toggle("hidden",id!=="home");title.textContent=id==="home"?"QR通信":({send:"送信 / 表示",show:"送信",receive:"受信 / 読込",settings:"設定"}[id]||"QR通信");if(id==="receive"){resetReceiveState();startCamera();}}
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));back.onclick=()=>go("home");$("end").onclick=()=>{stopAuto();go("home")};$("stop").onclick=()=>go("home");
 function resetReceiveState(){
-  recv=null; scanning=false; barcodeDetectBusy=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
+  recv=null; scanning=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
   $("recvStatus").textContent="コードを認識枠内に合わせてください"; const startBtn=$("startRead"); if(startBtn){startBtn.classList.remove("hidden");startBtn.disabled=false;startBtn.textContent="読取開始";} const rbs=$("receiveBlockStatus"); if(rbs){rbs.classList.add("hidden");rbs.innerHTML="";}
   $("bar").style.width="0%";
   $("result").textContent=""; normalResultText="";
@@ -72,7 +72,7 @@ async function startCamera(){
     $("recvStatus").textContent="コードを認識枠内に合わせ、読取開始を押してください";
   }catch(e){$("recvStatus").textContent="カメラを開始できません: "+e.name}
 }
-function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;barcodeDetectBusy=false;const v=$("video");try{v.pause()}catch(e){};if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0;}
+function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;const v=$("video");try{v.pause()}catch(e){};if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0;}
 $("startRead").onclick=()=>{
   if(!stream)return;
   const b=$("startRead");
@@ -87,51 +87,6 @@ $("startRead").onclick=()=>{
     if(scanning){b.classList.add("hidden");$("recvStatus").textContent="読取中…";}
   },300);
 };
-function initHtml5BarcodeScanner(){
-  if(html5BarcodeScanner || !window.Html5Qrcode)return html5BarcodeScanner;
-  try{
-    const F=window.Html5QrcodeSupportedFormats;
-    const formats=F ? [F.CODE_128,F.CODE_39,F.CODE_93,F.CODABAR,F.EAN_13,F.EAN_8,F.ITF,F.UPC_A,F.UPC_E].filter(v=>v!==undefined) : undefined;
-    html5BarcodeScanner=new Html5Qrcode("html5BarcodeReader", formats?{formatsToSupport:formats,verbose:false}:{verbose:false});
-  }catch(e){console.warn("html5-qrcode BAR reader init failed",e);html5BarcodeScanner=null}
-  return html5BarcodeScanner;
-}
-function cloneCanvas(src){
-  const c=document.createElement("canvas"); c.width=src.width;c.height=src.height;
-  c.getContext("2d").drawImage(src,0,0); return c;
-}
-function canvasToBarcodeFile(canvas){
-  return new Promise(resolve=>{
-    canvas.toBlob(blob=>resolve(blob?new File([blob],"scan.png",{type:"image/png"}):null),"image/png");
-  });
-}
-function html5FormatName(result){
-  try{
-    return String(result?.result?.format?.formatName || result?.result?.format?.format || result?.format?.formatName || result?.format || "");
-  }catch(e){return ""}
-}
-async function tryDecodeBarcode(canvas){
-  // IDポータルと同じ html5-qrcode を使用する。
-  // 入力画像は認識枠の切り出しだけなので、枠外のコードは探索しない。
-  const scanner=initHtml5BarcodeScanner();
-  if(!scanner)return null;
-  const file=await canvasToBarcodeFile(canvas);
-  if(!file)return null;
-  try{
-    let text="", format="";
-    if(typeof scanner.scanFileV2==="function"){
-      const result=await scanner.scanFileV2(file,false);
-      text=String(result?.decodedText||"");
-      format=html5FormatName(result);
-    }else{
-      text=String(await scanner.scanFile(file,false)||"");
-    }
-    if(!text)return null;
-    // QRコードは既存のjsQR側で扱う。ここは1次元BARコードだけを受け付ける。
-    if(/QR_CODE|QR CODE|QR/i.test(format))return null;
-    return {data:text,format,snapshot:canvas};
-  }catch(e){return null}
-}
 function scan(){
   if(!scanning)return;
   const v=$("video"), c=$("scanCanvas"), ctx=c.getContext("2d",{willReadFrequently:true});
@@ -143,15 +98,6 @@ function scan(){
     const im=ctx.getImageData(0,0,side,side);
     const code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"});
     if(code) handleDecoded(code);
-    else if(!recv && !barcodeDetectBusy && performance.now()-lastBarcodeScanAt>=180){
-      lastBarcodeScanAt=performance.now();
-      barcodeDetectBusy=true;
-      const snapshot=cloneCanvas(c);
-      tryDecodeBarcode(snapshot).then(bar=>{
-        barcodeDetectBusy=false;
-        if(bar && scanning && !recv)handleBarcodeDecoded(bar);
-      }).catch(()=>{barcodeDetectBusy=false});
-    }
   }
   if(scanning)scanRAF=requestAnimationFrame(scan);
 }
@@ -166,11 +112,6 @@ function captureRecognized(code,sourceCanvas=null){
   dst.width=Math.max(1,w);dst.height=Math.max(1,h);dst.getContext("2d").drawImage(src,x,y,w,h,0,0,w,h);
   if(v)v.classList.add("hidden");dst.classList.remove("hidden");if(guide)guide.classList.add("hidden");
 }
-function handleBarcodeDecoded(code){
-  const t=code.data||""; if(!t)return;
-  captureRecognized(null,code.snapshot||null);
-  showNormal(t,"BARコード");
-}
 function rawBytes(code){if(code.binaryData)return new Uint8Array(code.binaryData);return new TextEncoder().encode(code.data||"")}
 function eq(a,b,off=0){if(a.length<off+b.length)return false;for(let i=0;i<b.length;i++)if(a[off+i]!==b[i])return false;return true}
 function handleDecoded(code){
@@ -180,10 +121,10 @@ function handleDecoded(code){
   if(key===lastSeenKey && now-lastSeenAt<350)return;
   lastSeenKey=key; lastSeenAt=now;if(eq(b,START)&&b.length>=8&&b[4]===VERSION&&(b[5]===1||b[5]===2)&&b[6]>=1&&b[7]===1){let type=b[5],total=b[6],p=8,name="";if(type===2){let n=b[p++];name=new TextDecoder().decode(b.slice(p,p+n));p+=n}recv={type,total,name,parts:[b.slice(p)],next:2};updateRecv();if(total===1)finishRecv();return}if(recv&&eq(b,SHORT)&&b.length>=3){let no=b[2];if(no===recv.next){recv.parts.push(b.slice(3));recv.next++;updateRecv();if(no===recv.total)finishRecv()}return}if(!recv){
     // jsQR can very rarely return a false-positive object with no decoded text.
-    // Do not terminate scanning on an empty normal QR result; let BAR decoding continue.
+    // Empty-text false positives are ignored and scanning continues.
     const text=String(code.data||"");
     if(!text)return;
-    captureRecognized(code);showNormal(text,"QRコード")
+    captureRecognized(code);showNormal(text)
   }}
 function updateRecv(){
   let done=recv.parts.length;
@@ -208,25 +149,25 @@ async function copyTextReliable(text){
     const ok=document.execCommand("copy");document.body.removeChild(ta);return !!ok;
   }catch(_e){return false;}
 }
-function showNormal(t,kind="QRコード"){
+function showNormal(t){
   normalResultText=String(t??"");
   stopCamera();
-  $("recvStatus").textContent=`✓ ${kind} 読み取り完了`;
+  $("recvStatus").textContent="✓ QRコード 読み取り完了";
   $("result").classList.remove("hidden");
   $("result").textContent=normalResultText;
   $("copy").classList.remove("hidden");
   $("save").classList.remove("hidden");
   $("copy").onclick=async()=>{
     const ok=await copyTextReliable(normalResultText);
-    $("recvStatus").textContent=ok?`✓ ${kind} 読み取り完了・コピーしました`:`✓ ${kind} 読み取り完了（コピーに失敗）`;
+    $("recvStatus").textContent=ok?"✓ QRコード 読み取り完了・コピーしました":"✓ QRコード 読み取り完了（コピーに失敗）";
   };
-  $("save").onclick=()=>download(new TextEncoder().encode(normalResultText),kind==="BARコード"?"barcode.txt":"qr.txt","text/plain");
+  $("save").onclick=()=>download(new TextEncoder().encode(normalResultText),"qr.txt","text/plain");
 }
 function finishRecv(){stopCamera();let data=concat(...recv.parts);$("recvStatus").textContent="✓ 受信完了";$("result").classList.remove("hidden");if(recv.type===1){let t=new TextDecoder().decode(data);$("result").textContent=t;$("copy").classList.remove("hidden");$("copy").onclick=()=>navigator.clipboard.writeText(t);$("save").classList.remove("hidden");$("save").onclick=()=>download(data,"qr通信.txt","text/plain")}else{$("result").textContent=`📄 ${recv.name||"受信ファイル"}  ${data.length.toLocaleString()} bytes`;$("save").classList.remove("hidden");$("save").onclick=()=>download(data,recv.name||"received.bin","application/octet-stream")}}
 function download(bytes,name,type){let u=URL.createObjectURL(new Blob([bytes],{type})),a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=049").catch(console.error));
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=050").catch(console.error));
 
 if($("autoInterval"))$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value};
 

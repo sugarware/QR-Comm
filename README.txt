@@ -1,30 +1,18 @@
-QR通信 v0.49 PWA
+QR通信 v0.50 PWA
 
-変更点:
-- BARコード読取を BarcodeDetector 優先 + ZXing フォールバックへ変更
-- 認識対象は従来通り認識枠内のみ
-- 読取開始後300msの安定待ちを維持
-- メイン画面にバージョン表示を追加
+概要
+- 通常QRコードの表示・読み取り
+- QR通信プロトコルによるテキスト／ファイルの複数QRブロック転送
+- 受信時はカメラ起動後、認識枠内へQRコードを合わせて「読取開始」を押してから認識開始
+- 読取開始後は約300ms待って端末のブレが収まってから認識する
+- QR通信開始後は後続ブロックを連続受信
+- 通常QR読み取り完了後は認識したQR画像を表示
+- ホーム画面にアプリURLのQRコードを表示
+- 画面にバージョン番号 v0.50 を常時表示
 
-QR通信 v0.46
-- 受信画面で、カメラ起動直後にはコード認識を開始しない方式に変更
-- ユーザがコードを認識枠内に合わせて「読取開始」を押してから認識開始
-- ボタン押下による端末ブレを避けるため、押下後約300msの安定待ち時間を追加
-- QRコード / BARコードとも認識対象は認識枠内のみに限定
-- BARコード認識はZXingのCanvasデコード経路を優先するよう修正
-- QR通信開始後は従来どおり連続して後続ブロックを受信
-- v0.44のホームURL QR、通常QR受信後プレビュー等を継承
-
-- BARコード認識結果の文字列抽出をZXing API差異に対応
-- 表示・コピー・保存で同一の受信文字列を使用
-- iOS向けコピー処理フォールバック追加
-- Service Workerのキャッシュ対象を実在ファイルに修正
-
-
-v0.49: BARコード読取をIDポータルと同じ html5-qrcode 2.3.8 に統一。ヘッダにバージョン常時表示。更新時はHTML/JSをnetwork-first化。
-
-
-v0.49 changes:
-- Ignore empty-text jsQR false positives so BAR scan can continue.
-- Use PNG snapshots for html5-qrcode BAR decoding.
-- Show v0.49 badge persistently on every screen.
+v0.50 changes
+- BARコード読み取り機能を削除
+- html5-qrcode / ZXing / BarcodeDetector 関連コードを削除
+- QR読み取りを jsQR の単純な構成へ戻した
+- 空文字のQR誤検出は成功扱いせず読み取りを継続
+- Service Workerキャッシュをv0.50へ更新
