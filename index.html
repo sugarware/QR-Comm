@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.44</title>
+<title>QR通信 v0.45</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -212,7 +212,7 @@ header #settingsHome{
 }
 </style>
 <style>
-/* v0.44 home URL QR / captured-code preview */
+/* v0.45 home URL QR / captured-code preview */
 .home{padding-top:7vh}
 .homeUrlQR{margin:28px auto 0;padding:14px;max-width:300px;text-align:center;background:rgba(255,255,255,.74)!important}
 #homeQR{display:block;width:min(52vw,220px);height:auto;margin:0 auto;background:#fff;border-radius:10px}
@@ -253,7 +253,7 @@ header #settingsHome{
 </section>
 <section id="receive" class="page">
 <div id="cameraFrame"><video id="video" playsinline></video><canvas id="capturedCanvas" class="hidden"></canvas><div id="cameraGuide"></div></div><canvas id="scanCanvas" hidden></canvas>
-<div id="receiveBlockStatus" class="blockStatus hidden"></div><div id="recvStatus" class="status">QRコードを映してください</div>
+<div id="receiveBlockStatus" class="blockStatus hidden"></div><div id="recvStatus" class="status">コードを認識枠内に合わせてください</div><div class="row"><button id="startRead" class="primary">読取開始</button></div>
 <div class="progress"><div id="bar"></div></div>
 <div id="result" class="card hidden"></div>
 <div class="row"><button id="copy" class="hidden">コピー</button><button id="save" class="hidden">ファイル保存</button><button id="stop">閉じる</button></div>

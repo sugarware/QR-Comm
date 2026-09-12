@@ -1,12 +1,12 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
-let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, lastBarcodeScanAt=0, barcodeReader=null;
+let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, lastBarcodeScanAt=0, barcodeReader=null;
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]), VERSION=1;
 function go(id){stopAuto();stopCamera();pages.forEach(p=>p.classList.toggle("active",p.id===id));current=id;back.classList.toggle("hidden",id==="home");const sh=$("settingsHome");if(sh)sh.classList.toggle("hidden",id!=="home");title.textContent=id==="home"?"QR通信":({send:"送信 / 表示",show:"送信",receive:"受信 / 読込",settings:"設定"}[id]||"QR通信");if(id==="receive"){resetReceiveState();startCamera();}}
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));back.onclick=()=>go("home");$("end").onclick=()=>{stopAuto();go("home")};$("stop").onclick=()=>go("home");
 function resetReceiveState(){
-  recv=null; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
-  $("recvStatus").textContent="QRコード / BARコードを映してください"; const rbs=$("receiveBlockStatus"); if(rbs){rbs.classList.add("hidden");rbs.innerHTML="";}
+  recv=null; scanning=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
+  $("recvStatus").textContent="コードを認識枠内に合わせてください"; const startBtn=$("startRead"); if(startBtn){startBtn.classList.remove("hidden");startBtn.disabled=false;startBtn.textContent="読取開始";} const rbs=$("receiveBlockStatus"); if(rbs){rbs.classList.add("hidden");rbs.innerHTML="";}
   $("bar").style.width="0%";
   $("result").textContent="";
   $("result").classList.add("hidden");
@@ -67,29 +67,50 @@ async function startCamera(){
     await v.play();
     startCameraPeriodMeasurement(v);
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-    scanEnableAt=performance.now()+400;
-    scan();
+    scanEnableAt=0;
+    scanning=false;
+    $("recvStatus").textContent="コードを認識枠内に合わせ、読取開始を押してください";
   }catch(e){$("recvStatus").textContent="カメラを開始できません: "+e.name}
 }
-function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;const v=$("video");try{v.pause()}catch(e){};if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0;}
+function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;const v=$("video");try{v.pause()}catch(e){};if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0;}
+$("startRead").onclick=()=>{
+  if(!stream)return;
+  const b=$("startRead");
+  b.disabled=true;
+  b.textContent="安定待ち…";
+  $("recvStatus").textContent="端末を動かさず、そのままお待ちください";
+  scanning=true;
+  scanEnableAt=performance.now()+300;
+  if(scanRAF)cancelAnimationFrame(scanRAF);
+  scanRAF=requestAnimationFrame(scan);
+  setTimeout(()=>{
+    if(scanning){b.classList.add("hidden");$("recvStatus").textContent="読取中…";}
+  },300);
+};
 function initBarcodeReader(){
   if(barcodeReader||!window.ZXing)return;
   try{
     const formats=[ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39,ZXing.BarcodeFormat.CODE_93,ZXing.BarcodeFormat.CODABAR,ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,ZXing.BarcodeFormat.ITF,ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,ZXing.BarcodeFormat.RSS_14,ZXing.BarcodeFormat.RSS_EXPANDED].filter(v=>v!==undefined);
     const hints=new Map(); hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,formats);
-    barcodeReader=new ZXing.MultiFormatReader(); barcodeReader.setHints(hints);
+    if(ZXing.BrowserMultiFormatReader) barcodeReader=new ZXing.BrowserMultiFormatReader(hints);
+    else {barcodeReader=new ZXing.MultiFormatReader(); barcodeReader.setHints(hints);}
   }catch(e){console.warn("BAR reader init failed",e);barcodeReader=null}
 }
-function tryDecodeBarcode(im,w,h){
+function tryDecodeBarcode(canvas,im,w,h){
   initBarcodeReader(); if(!barcodeReader)return null;
   try{
-    const src=new ZXing.RGBLuminanceSource(im.data,w,h);
-    const bitmap=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
-    const r=barcodeReader.decodeWithState(bitmap);
+    let r=null;
+    if(barcodeReader.decodeFromCanvas) r=barcodeReader.decodeFromCanvas(canvas);
+    else {
+      const src=new ZXing.RGBLuminanceSource(im.data,w,h);
+      const bitmap=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
+      r=barcodeReader.decodeWithState(bitmap);
+    }
     return r?{data:r.getText(),format:String(r.getBarcodeFormat()),resultPoints:(r.getResultPoints&&r.getResultPoints())||[]}:null;
   }catch(e){return null}
 }
 function scan(){
+  if(!scanning)return;
   const v=$("video"), c=$("scanCanvas"), ctx=c.getContext("2d",{willReadFrequently:true});
   if(performance.now()>=scanEnableAt && v.readyState>=2 && v.videoWidth>0 && v.videoHeight>0){
     const side=Math.min(v.videoWidth,v.videoHeight);
@@ -101,11 +122,11 @@ function scan(){
     if(code) handleDecoded(code);
     else if(!recv && performance.now()-lastBarcodeScanAt>=180){
       lastBarcodeScanAt=performance.now();
-      const bar=tryDecodeBarcode(im,side,side);
+      const bar=tryDecodeBarcode(c,im,side,side);
       if(bar)handleBarcodeDecoded(bar);
     }
   }
-  scanRAF=requestAnimationFrame(scan);
+  if(scanning)scanRAF=requestAnimationFrame(scan);
 }
 function captureRecognized(code){
   const src=$("scanCanvas"), dst=$("capturedCanvas"), v=$("video"), guide=$("cameraGuide");
