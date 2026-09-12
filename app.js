@@ -100,9 +100,9 @@ function cloneCanvas(src){
   const c=document.createElement("canvas"); c.width=src.width;c.height=src.height;
   c.getContext("2d").drawImage(src,0,0); return c;
 }
-function canvasToJpegFile(canvas){
+function canvasToBarcodeFile(canvas){
   return new Promise(resolve=>{
-    canvas.toBlob(blob=>resolve(blob?new File([blob],"scan.jpg",{type:"image/jpeg"}):null),"image/jpeg",0.92);
+    canvas.toBlob(blob=>resolve(blob?new File([blob],"scan.png",{type:"image/png"}):null),"image/png");
   });
 }
 function html5FormatName(result){
@@ -115,7 +115,7 @@ async function tryDecodeBarcode(canvas){
   // 入力画像は認識枠の切り出しだけなので、枠外のコードは探索しない。
   const scanner=initHtml5BarcodeScanner();
   if(!scanner)return null;
-  const file=await canvasToJpegFile(canvas);
+  const file=await canvasToBarcodeFile(canvas);
   if(!file)return null;
   try{
     let text="", format="";
@@ -178,7 +178,13 @@ function handleDecoded(code){
   const now=performance.now();
   const key=(code.data||"")+"|"+b.length+"|"+Array.from(b.slice(0,12)).join(",");
   if(key===lastSeenKey && now-lastSeenAt<350)return;
-  lastSeenKey=key; lastSeenAt=now;if(eq(b,START)&&b.length>=8&&b[4]===VERSION&&(b[5]===1||b[5]===2)&&b[6]>=1&&b[7]===1){let type=b[5],total=b[6],p=8,name="";if(type===2){let n=b[p++];name=new TextDecoder().decode(b.slice(p,p+n));p+=n}recv={type,total,name,parts:[b.slice(p)],next:2};updateRecv();if(total===1)finishRecv();return}if(recv&&eq(b,SHORT)&&b.length>=3){let no=b[2];if(no===recv.next){recv.parts.push(b.slice(3));recv.next++;updateRecv();if(no===recv.total)finishRecv()}return}if(!recv){captureRecognized(code);showNormal(code.data||new TextDecoder().decode(b),"QRコード")}}
+  lastSeenKey=key; lastSeenAt=now;if(eq(b,START)&&b.length>=8&&b[4]===VERSION&&(b[5]===1||b[5]===2)&&b[6]>=1&&b[7]===1){let type=b[5],total=b[6],p=8,name="";if(type===2){let n=b[p++];name=new TextDecoder().decode(b.slice(p,p+n));p+=n}recv={type,total,name,parts:[b.slice(p)],next:2};updateRecv();if(total===1)finishRecv();return}if(recv&&eq(b,SHORT)&&b.length>=3){let no=b[2];if(no===recv.next){recv.parts.push(b.slice(3));recv.next++;updateRecv();if(no===recv.total)finishRecv()}return}if(!recv){
+    // jsQR can very rarely return a false-positive object with no decoded text.
+    // Do not terminate scanning on an empty normal QR result; let BAR decoding continue.
+    const text=String(code.data||"");
+    if(!text)return;
+    captureRecognized(code);showNormal(text,"QRコード")
+  }}
 function updateRecv(){
   let done=recv.parts.length;
   const el=$("receiveBlockStatus");
@@ -220,7 +226,7 @@ function finishRecv(){stopCamera();let data=concat(...recv.parts);$("recvStatus"
 function download(bytes,name,type){let u=URL.createObjectURL(new Blob([bytes],{type})),a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=048").catch(console.error));
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=049").catch(console.error));
 
 if($("autoInterval"))$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value};
 
