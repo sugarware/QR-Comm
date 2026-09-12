@@ -1,6 +1,6 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
-let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, lastBarcodeScanAt=0, barcodeReader=null;
+let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, lastBarcodeScanAt=0, barcodeReader=null, normalResultText="";
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]), VERSION=1;
 function go(id){stopAuto();stopCamera();pages.forEach(p=>p.classList.toggle("active",p.id===id));current=id;back.classList.toggle("hidden",id==="home");const sh=$("settingsHome");if(sh)sh.classList.toggle("hidden",id!=="home");title.textContent=id==="home"?"QR通信":({send:"送信 / 表示",show:"送信",receive:"受信 / 読込",settings:"設定"}[id]||"QR通信");if(id==="receive"){resetReceiveState();startCamera();}}
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));back.onclick=()=>go("home");$("end").onclick=()=>{stopAuto();go("home")};$("stop").onclick=()=>go("home");
@@ -8,7 +8,7 @@ function resetReceiveState(){
   recv=null; scanning=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
   $("recvStatus").textContent="コードを認識枠内に合わせてください"; const startBtn=$("startRead"); if(startBtn){startBtn.classList.remove("hidden");startBtn.disabled=false;startBtn.textContent="読取開始";} const rbs=$("receiveBlockStatus"); if(rbs){rbs.classList.add("hidden");rbs.innerHTML="";}
   $("bar").style.width="0%";
-  $("result").textContent="";
+  $("result").textContent=""; normalResultText="";
   $("result").classList.add("hidden");
   $("copy").classList.add("hidden");
   $("save").classList.add("hidden");
@@ -106,7 +106,21 @@ function tryDecodeBarcode(canvas,im,w,h){
       const bitmap=new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
       r=barcodeReader.decodeWithState(bitmap);
     }
-    return r?{data:r.getText(),format:String(r.getBarcodeFormat()),resultPoints:(r.getResultPoints&&r.getResultPoints())||[]}:null;
+    if(!r)return null;
+    // ZXing のビルド差を吸収して必ず文字列として取り出す
+    let text="";
+    if(typeof r.getText==="function") text=r.getText();
+    else if(typeof r.text==="string"||typeof r.text==="number") text=r.text;
+    else if(typeof r.getRawBytes==="function"){
+      const raw=r.getRawBytes();
+      if(raw&&raw.length) text=new TextDecoder().decode(new Uint8Array(raw));
+    }
+    if(text===undefined||text===null)return null;
+    text=String(text);
+    if(!text.length)return null;
+    let fmt="";
+    try{fmt=typeof r.getBarcodeFormat==="function"?String(r.getBarcodeFormat()):String(r.barcodeFormat||"")}catch(_e){}
+    return {data:text,format:fmt,resultPoints:(r.getResultPoints&&r.getResultPoints())||[]};
   }catch(e){return null}
 }
 function scan(){
@@ -162,7 +176,33 @@ function updateRecv(){
   $("recvStatus").textContent="そのままQRコードにカメラを向けてください";
   $("bar").style.width=(done/recv.total*100)+"%";
 }
-function showNormal(t,kind="QRコード"){stopCamera();$("recvStatus").textContent=`✓ ${kind} 読み取り完了`;$("result").classList.remove("hidden");$("result").textContent=t;$("copy").classList.remove("hidden");$("save").classList.remove("hidden");$("copy").onclick=()=>navigator.clipboard.writeText(t);$("save").onclick=()=>download(new TextEncoder().encode(t),kind==="BARコード"?"barcode.txt":"qr.txt","text/plain")}
+async function copyTextReliable(text){
+  const value=String(text??"");
+  if(!value)return false;
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(value);return true;}
+  }catch(_e){}
+  try{
+    const ta=document.createElement("textarea");
+    ta.value=value;ta.setAttribute("readonly","");ta.style.position="fixed";ta.style.opacity="0";
+    document.body.appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand("copy");document.body.removeChild(ta);return !!ok;
+  }catch(_e){return false;}
+}
+function showNormal(t,kind="QRコード"){
+  normalResultText=String(t??"");
+  stopCamera();
+  $("recvStatus").textContent=`✓ ${kind} 読み取り完了`;
+  $("result").classList.remove("hidden");
+  $("result").textContent=normalResultText;
+  $("copy").classList.remove("hidden");
+  $("save").classList.remove("hidden");
+  $("copy").onclick=async()=>{
+    const ok=await copyTextReliable(normalResultText);
+    $("recvStatus").textContent=ok?`✓ ${kind} 読み取り完了・コピーしました`:`✓ ${kind} 読み取り完了（コピーに失敗）`;
+  };
+  $("save").onclick=()=>download(new TextEncoder().encode(normalResultText),kind==="BARコード"?"barcode.txt":"qr.txt","text/plain");
+}
 function finishRecv(){stopCamera();let data=concat(...recv.parts);$("recvStatus").textContent="✓ 受信完了";$("result").classList.remove("hidden");if(recv.type===1){let t=new TextDecoder().decode(data);$("result").textContent=t;$("copy").classList.remove("hidden");$("copy").onclick=()=>navigator.clipboard.writeText(t);$("save").classList.remove("hidden");$("save").onclick=()=>download(data,"qr通信.txt","text/plain")}else{$("result").textContent=`📄 ${recv.name||"受信ファイル"}  ${data.length.toLocaleString()} bytes`;$("save").classList.remove("hidden");$("save").onclick=()=>download(data,recv.name||"received.bin","application/octet-stream")}}
 function download(bytes,name,type){let u=URL.createObjectURL(new Blob([bytes],{type})),a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
