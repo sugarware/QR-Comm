@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".p
 let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, normalResultText="";
 let transferSource=null, transferMode="legacy", sessionId=null, senderStream=null, senderRAF=0, senderActive=false, senderAligning=false, senderAckSeenAt=0, senderLastScanAt=0, handshakeComplete=false, pendingHandshakeStart=null, recvAlignmentSeenAt=0, switchingReceiveCamera=false;
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]), ACK=new Uint8Array([0xD3,0x41,0x43]);
-const VERSION1=1, VERSION2=2, ACK_VERSION=1, MODE_LEGACY=0, MODE_HANDSHAKE=1, ALIGN_HOLD_MS=1000;
+const VERSION1=1, VERSION2=2, ACK_VERSION=1, MODE_LEGACY=0, MODE_HANDSHAKE=1, ALIGN_HOLD_MS=1000, ACK_SCAN_SIZE=320;
 
 function go(id){
   stopAuto();stopSenderHandshake();stopCamera();
@@ -94,14 +94,14 @@ async function startHandshakeSend(){
 function cancelHandshakeToLegacy(){stopSenderHandshake();if(!transferSource)return;sessionId=randomSession();const count=Math.max(1,Math.ceil(transferSource.bytes.length/(+$("block").value)));if(count<=255){transferMode="legacy";blocks=makeBlocks(transferSource.bytes,transferSource.type,transferSource.name,MODE_LEGACY,sessionId);blockIndex=0;$("handshakeToggle").textContent="⇄ ハンドシェーク";renderBlock()}else{transferMode="legacy";blocks=[];clearQR();$("sendStatus").textContent=`${count} Block`;$("waitText").textContent="255 Blockを超えるためハンドシェークを開始してください";$("handshakeToggle").textContent="⇄ ハンドシェーク";setLegacyControls(false,true)}}
 async function startSenderCamera(){
   if(!navigator.mediaDevices?.getUserMedia)throw new Error("Camera API unavailable");stopSenderCameraTracks();
-  const v=$("senderVideo");senderStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"user"}},audio:false});v.srcObject=senderStream;await v.play();senderLastScanAt=0;senderAckSeenAt=0;
+  const v=$("senderVideo");senderStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"user"},width:{ideal:640},height:{ideal:480}},audio:false});v.srcObject=senderStream;await v.play();senderLastScanAt=0;senderAckSeenAt=0;
 }
 function stopSenderCameraTracks(){const v=$("senderVideo");try{v.pause()}catch(e){}if(senderStream){senderStream.getTracks().forEach(t=>t.stop());senderStream=null}if(v)v.srcObject=null}
 function stopSenderHandshake(){if(senderRAF)cancelAnimationFrame(senderRAF);senderRAF=0;senderActive=false;senderAligning=false;senderAckSeenAt=0;setSenderAckVisual(false);const r=$("resumeHandshake");if(r)r.classList.add("hidden");stopSenderCameraTracks();const hb=$("handshakeToggle");if(hb)hb.textContent="⇄ ハンドシェーク"}
 function setSenderAckVisual(on){$("qrCanvas").classList.toggle("ackSeen",!!on);if(senderAligning)$("resumeHandshake").classList.toggle("hidden",!on)}
 function senderScan(now){
   if(!senderActive)return;const v=$("senderVideo"),c=$("senderScanCanvas");
-  if(now-senderLastScanAt>=45&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){senderLastScanAt=now;const ctx=c.getContext("2d",{willReadFrequently:true}),side=Math.min(v.videoWidth,v.videoHeight),sx=Math.floor((v.videoWidth-side)/2),sy=Math.floor((v.videoHeight-side)/2);c.width=side;c.height=side;ctx.drawImage(v,sx,sy,side,side,0,0,side,side);const im=ctx.getImageData(0,0,side,side),code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"});if(code)handleSenderDecoded(code)}
+  if(now-senderLastScanAt>=45&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){senderLastScanAt=now;const ctx=c.getContext("2d",{willReadFrequently:true}),srcSide=Math.min(v.videoWidth,v.videoHeight),sx=Math.floor((v.videoWidth-srcSide)/2),sy=Math.floor((v.videoHeight-srcSide)/2),side=ACK_SCAN_SIZE;c.width=side;c.height=side;ctx.drawImage(v,sx,sy,srcSide,srcSide,0,0,side,side);const im=ctx.getImageData(0,0,side,side),code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"});if(code)handleSenderDecoded(code)}
   if(senderAligning&&performance.now()-senderAckSeenAt>ALIGN_HOLD_MS)setSenderAckVisual(false);
   if(senderActive)senderRAF=requestAnimationFrame(senderScan);
 }
@@ -162,7 +162,7 @@ function handleDecoded(code){
 }
 function updateAlignmentAckVisibility(){if(!recv?.alignment)return;if(performance.now()-recvAlignmentSeenAt>ALIGN_HOLD_MS)hideAck()}
 function makeAck(blockNo){return concat(ACK,new Uint8Array([ACK_VERSION]),recv.session,u16(blockNo))}
-function showAck(blockNo){if(!recv?.session)return;const grid=$("ackGrid"),v=$("video"),guide=$("cameraGuide"),cap=$("capturedCanvas"),data=makeAck(blockNo);for(const c of grid.querySelectorAll("canvas")){c.width=260;c.height=260;drawQRToCanvas(c,data,"M")}grid.classList.remove("hidden");v.classList.add("hidden");guide.classList.add("hidden");cap.classList.add("hidden")}
+function showAck(blockNo){if(!recv?.session)return;const grid=$("ackGrid"),v=$("video"),guide=$("cameraGuide"),cap=$("capturedCanvas"),data=makeAck(blockNo);for(const c of grid.querySelectorAll("canvas")){c.width=260;c.height=260;drawQRToCanvas(c,data,"L")}grid.classList.remove("hidden");v.classList.add("hidden");guide.classList.add("hidden");cap.classList.add("hidden")}
 function hideAck(){const grid=$("ackGrid"),v=$("video"),guide=$("cameraGuide");grid.classList.add("hidden");v.classList.remove("hidden");guide.classList.remove("hidden")}
 function updateRecv(){const done=recv.parts.length;receiverStatus(done,recv.total);if(!recv.handshake||!recv.alignment){$("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent=recv.handshake?"ハンドシェーク受信中…":"そのままQRコードにカメラを向けてください"}$("bar").style.width=(done/recv.total*100)+"%"}
 
@@ -174,7 +174,7 @@ function download(bytes,name,type){const u=URL.createObjectURL(new Blob([bytes],
 
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=055").catch(console.error));
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=056").catch(console.error));
 if($("autoInterval")){$("autoInterval").value=localStorage.autoInterval||"200";$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value}};
 
 function measureDisplayPeriod(){const o=$("displayDiag");if(!o)return;o.textContent="測定中…";let a=[],last=performance.now(),start=last;function f(now){const d=now-last;last=now;if(d>0&&d<100)a.push(d);if(now-start<1800)return requestAnimationFrame(f);if(a.length){a.sort((x,y)=>x-y);const d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} Hz / ${d.toFixed(1)} ms`}}requestAnimationFrame(f)}
