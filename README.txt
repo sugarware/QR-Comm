@@ -1,4 +1,4 @@
-QR通信 v0.56 PWA
+QR通信 v0.57 PWA
 
 概要
 - 通常QRコードの表示・読み取り
@@ -62,3 +62,8 @@ v0.56
 - ACK解析画像を中央正方形から320×320へ縮小してjsQRへ入力
 - ACK QRのECCをMからLへ変更
 - ACKフレームは10 byteのため標準QRでは既にVersion 1（21×21 modules）。標準QRのmodule数はこれ以上削減不可
+
+
+v0.57
+- ACK QRの一辺の表示サイズを従来の50%へ縮小し、中央配置を維持
+- ACK内容・ECC・ACK受信解像度・Handshake処理は変更なし
