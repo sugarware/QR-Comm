@@ -101,12 +101,11 @@ function stopSenderHandshake(){if(senderRAF)cancelAnimationFrame(senderRAF);send
 function setSenderAckVisual(on){$("qrCanvas").classList.toggle("ackSeen",!!on);if(senderAligning)$("resumeHandshake").classList.toggle("hidden",!on)}
 function senderScan(now){
   if(!senderActive)return;const v=$("senderVideo"),c=$("senderScanCanvas");
-  if(now-senderLastScanAt>=45&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){senderLastScanAt=now;const ctx=c.getContext("2d",{willReadFrequently:true}),side=Math.min(v.videoWidth,v.videoHeight),sx=Math.floor((v.videoWidth-side)/2),sy=Math.floor((v.videoHeight-side)/2);c.width=side;c.height=side;ctx.drawImage(v,sx,sy,side,side,0,0,side,side);const im=ctx.getImageData(0,0,side,side),code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"});if(code)handleSenderDecoded(code)}
-  if(senderAligning&&performance.now()-senderAckSeenAt>ALIGN_HOLD_MS)setSenderAckVisual(false);
+  if(now-senderLastScanAt>=45&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){senderLastScanAt=now;const ctx=c.getContext("2d",{willReadFrequently:true}),side=Math.min(v.videoWidth,v.videoHeight),sx=Math.floor((v.videoWidth-side)/2),sy=Math.floor((v.videoHeight-side)/2);c.width=side;c.height=side;ctx.drawImage(v,sx,sy,side,side,0,0,side,side);const im=ctx.getImageData(0,0,side,side),code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"}),ackDetected=!!(code&&handleSenderDecoded(code));if(senderAligning)setSenderAckVisual(ackDetected)}
   if(senderActive)senderRAF=requestAnimationFrame(senderScan);
 }
 function parseAck(b){if(!eq(b,ACK)||b.length<10||b[3]!==ACK_VERSION)return null;return{session:b.slice(4,8),block:(b[8]<<8)|b[9]}}
-function handleSenderDecoded(code){const a=parseAck(rawBytes(code));if(!a||!sameBytes(a.session,sessionId)||a.block!==blockIndex+1)return;senderAckSeenAt=performance.now();if(senderAligning){setSenderAckVisual(true);$("waitText").textContent="ACK確認中：位置を固定して通信再開を押してください";return}if(blockIndex>=blocks.length-1){completeHandshakeSend();return}blockIndex++;renderBlock()}
+function handleSenderDecoded(code){const a=parseAck(rawBytes(code));if(!a||!sameBytes(a.session,sessionId)||a.block!==blockIndex+1)return false;senderAckSeenAt=performance.now();if(senderAligning){$("waitText").textContent="ACK確認中：位置を固定して通信再開を押してください";return true}if(blockIndex>=blocks.length-1){completeHandshakeSend();return true}blockIndex++;renderBlock();return true}
 function completeHandshakeSend(){handshakeComplete=true;senderAligning=false;setSenderAckVisual(false);$("resumeHandshake").classList.add("hidden");$("waitText").textContent="✓ 送信完了";stopSenderCameraTracks();senderActive=false;if(senderRAF)cancelAnimationFrame(senderRAF);senderRAF=0;$("handshakeToggle").textContent="⇄ ハンドシェーク";}
 
 async function startCamera(facing="environment"){
@@ -174,7 +173,7 @@ function download(bytes,name,type){const u=URL.createObjectURL(new Blob([bytes],
 
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=059").catch(console.error));
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=060").catch(console.error));
 if($("autoInterval")){$("autoInterval").value=localStorage.autoInterval||"200";$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value}};
 
 function measureDisplayPeriod(){const o=$("displayDiag");if(!o)return;o.textContent="測定中…";let a=[],last=performance.now(),start=last;function f(now){const d=now-last;last=now;if(d>0&&d<100)a.push(d);if(now-start<1800)return requestAnimationFrame(f);if(a.length){a.sort((x,y)=>x-y);const d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} Hz / ${d.toFixed(1)} ms`}}requestAnimationFrame(f)}
