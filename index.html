@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.50</title>
+<title>QR通信 v0.51</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -56,6 +56,8 @@ h1{font-size:30px;margin:20px 0 16px} h2{font-size:21px}
 button{border-radius:14px;font-weight:700}
 #home button{min-height:70px;font-size:24px}
 #sendStatus,#recvStatus{font-size:30px;font-weight:800;margin:4px 0 10px}
+#recvStatus.receiveGuide{font-size:20px;line-height:1.25}
+#recvStatus.singleQRDone{font-size:18px;line-height:1.2;white-space:nowrap}
 #qrCanvas{display:block;width:min(92vw,560px)!important;height:auto!important;margin:0 auto;background:#fff;border-radius:12px}
 #autoToggle{background:var(--accent);color:#fff;border:none;min-height:76px;font-size:26px}
 .manualControls button{min-width:78px}
@@ -225,8 +227,8 @@ header #settingsHome{
 </style>
 </head>
 <body>
-<div id="appVersionBadge" aria-label="バージョン">v0.50</div>
-<header><button id="back" class="hidden">＜ 戻る</button><span id="title">QR通信 v0.50</span><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button></header>
+<div id="appVersionBadge" aria-label="バージョン">v0.51</div>
+<header><button id="back" class="hidden">＜ 戻る</button><span id="title">QR通信 v0.51</span><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button></header>
 <main>
 <section id="home" class="page active home"><button class="big" data-go="send">送信 / 表示</button><button class="big" data-go="receive">受信 / 読込</button>
 <div class="homeUrlQR card">
@@ -253,7 +255,7 @@ header #settingsHome{
   <button id="prev">←</button>
   <button id="next">→</button>
 </div>
-<button id="end" class="endButton">終了</button>
+<div class="row"><button id="copyQR" class="endButton hidden">コピー</button><button id="end" class="endButton">終了</button></div>
 <div id="showHelp" class="muted">自動送信間隔とPayloadサイズは設定で変更できます。読み損なった場合は停止し、−10 / ← で戻して再開できます。</div>
 </section>
 <section id="receive" class="page">
@@ -294,7 +296,7 @@ header #settingsHome{
 <div class="card"><b>プロトコル</b><p class="muted">Start Magic 4B / Version 1B / Type 1B / Total 1B / Block 1B<br>継続: Short Magic 2B / Block 1B</p></div>
 <div class="settingsGroup"><h3>診断</h3><div id="diagBox"><div>画面更新: <span id="displayDiag">未測定</span></div><div>カメラ: <span id="cameraDiag">受信画面で測定</span></div></div><button id="measureDisplay" type="button">画面周期を測定</button><div class="muted">ブラウザから見た実効周期です。</div></div></section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="app.js?v=050"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="app.js?v=051"></script>
 </body></html><style>
 #home{position:relative}
 #settingsHome{position:absolute!important;right:12px!important;top:12px!important;width:48px!important;height:48px!important;min-height:48px!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:28px!important;line-height:1!important;z-index:2}

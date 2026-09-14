@@ -2,11 +2,11 @@
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
 let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, normalResultText="";
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]), VERSION=1;
-function go(id){stopAuto();stopCamera();pages.forEach(p=>p.classList.toggle("active",p.id===id));current=id;back.classList.toggle("hidden",id==="home");const sh=$("settingsHome");if(sh)sh.classList.toggle("hidden",id!=="home");title.textContent=id==="home"?"QR通信":({send:"送信 / 表示",show:"送信",receive:"受信 / 読込",settings:"設定"}[id]||"QR通信");if(id==="receive"){resetReceiveState();startCamera();}}
+function go(id){stopAuto();stopCamera();pages.forEach(p=>p.classList.toggle("active",p.id===id));current=id;const cq=$("copyQR");if(cq)cq.classList.add("hidden");back.classList.toggle("hidden",id==="home");const sh=$("settingsHome");if(sh)sh.classList.toggle("hidden",id!=="home");title.textContent=id==="home"?"QR通信":({send:"送信 / 表示",show:"送信",receive:"受信 / 読込",settings:"設定"}[id]||"QR通信");if(id==="receive"){resetReceiveState();startCamera();}}
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));back.onclick=()=>go("home");$("end").onclick=()=>{stopAuto();go("home")};$("stop").onclick=()=>go("home");
 function resetReceiveState(){
   recv=null; scanning=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
-  $("recvStatus").textContent="コードを認識枠内に合わせてください"; const startBtn=$("startRead"); if(startBtn){startBtn.classList.remove("hidden");startBtn.disabled=false;startBtn.textContent="読取開始";} const rbs=$("receiveBlockStatus"); if(rbs){rbs.classList.add("hidden");rbs.innerHTML="";}
+  $("recvStatus").classList.remove("receiveGuide","singleQRDone"); $("recvStatus").textContent="コードを認識枠内に合わせてください"; const startBtn=$("startRead"); if(startBtn){startBtn.classList.remove("hidden");startBtn.disabled=false;startBtn.textContent="読取開始";} const rbs=$("receiveBlockStatus"); if(rbs){rbs.classList.add("hidden");rbs.innerHTML="";}
   $("bar").style.width="0%";
   $("result").textContent=""; normalResultText="";
   $("result").classList.add("hidden");
@@ -52,9 +52,10 @@ function makeBlocks(bytes,type,name=""){let size=+$("block").value, payloads=[];
 function binaryString(u8){let s="";for(let i=0;i<u8.length;i++)s+=String.fromCharCode(u8[i]);return s}
 function drawQR(data,binary=false){let c=$("qrCanvas"),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);try{let qr=qrcode(0,$("ecc").value);qr.addData(binary?binaryString(data):data,binary?"Byte":"Byte");qr.make();let n=qr.getModuleCount(),pad=24,cell=Math.floor((c.width-pad*2)/n),used=cell*n,x=(c.width-used)/2,y=x;ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle="#000";for(let r=0;r<n;r++)for(let col=0;col<n;col++)if(qr.isDark(r,col))ctx.fillRect(x+col*cell,y+r*cell,cell,cell);}catch(e){alert("QR生成に失敗しました: "+e.message)}}
 function drawHomeQR(){const c=$("homeQR");if(!c||!window.qrcode)return;const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);try{const qr=qrcode(0,"M");qr.addData("https://sugarware.github.io/QR-Comm/","Byte");qr.make();const n=qr.getModuleCount(),pad=20,cell=Math.floor((c.width-pad*2)/n),used=cell*n,x=(c.width-used)/2,y=x;ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle="#000";for(let r=0;r<n;r++)for(let col=0;col<n;col++)if(qr.isDark(r,col))ctx.fillRect(x+col*cell,y+r*cell,cell,cell);}catch(e){console.error(e)}}
-$("normalQR").onclick=()=>{let t=$("text").value;if(!t){alert("テキストを入力してください");return}blocks=[];go("show");$("sendStatus").textContent="通常QR";if($("showHelp"))$("showHelp").classList.add("hidden");$("waitText").textContent="相手に読み取ってもらってください";$("back10").classList.add("hidden");$("prev").classList.add("hidden");$("next").classList.add("hidden");if($("autoToggle"))$("autoToggle").classList.add("hidden");drawQR(new TextEncoder().encode(t),true)};
-$("commQR").onclick=()=>{try{if($("showHelp"))$("showHelp").classList.remove("hidden");let type=fileData?2:1,bytes=fileData?fileData.bytes:bytesText();if(!bytes.length){alert("テキストまたはファイルを指定してください");return}blocks=makeBlocks(bytes,type,fileData?.name||"");blockIndex=0;go("show");$("back10").classList.remove("hidden");$("prev").classList.remove("hidden");$("next").classList.remove("hidden");if($("autoToggle"))$("autoToggle").classList.remove("hidden");renderBlock()}catch(e){alert(e.message)}};
+$("normalQR").onclick=()=>{let t=$("text").value;if(!t){alert("テキストを入力してください");return}blocks=[];go("show");if($("copyQR"))$("copyQR").classList.remove("hidden");$("sendStatus").textContent="通常QR";if($("showHelp"))$("showHelp").classList.add("hidden");$("waitText").textContent="相手に読み取ってもらってください";$("back10").classList.add("hidden");$("prev").classList.add("hidden");$("next").classList.add("hidden");if($("autoToggle"))$("autoToggle").classList.add("hidden");drawQR(new TextEncoder().encode(t),true)};
+$("commQR").onclick=()=>{try{if($("copyQR"))$("copyQR").classList.add("hidden");if($("showHelp"))$("showHelp").classList.remove("hidden");let type=fileData?2:1,bytes=fileData?fileData.bytes:bytesText();if(!bytes.length){alert("テキストまたはファイルを指定してください");return}blocks=makeBlocks(bytes,type,fileData?.name||"");blockIndex=0;go("show");$("back10").classList.remove("hidden");$("prev").classList.remove("hidden");$("next").classList.remove("hidden");if($("autoToggle"))$("autoToggle").classList.remove("hidden");renderBlock()}catch(e){alert(e.message)}};
 function renderBlock(){senderStatus();$("waitText").textContent="相手の読み取りを待っています…";drawQR(blocks[blockIndex],true);$("back10").disabled=blockIndex===0;$("prev").disabled=blockIndex===0;$("next").disabled=blockIndex===blocks.length-1;if($("autoToggle"))$("autoToggle").disabled=blocks.length<=1}
+$("copyQR").onclick=async()=>{try{const c=$("qrCanvas");const blob=await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error("PNG変換に失敗しました")),"image/png"));if(!navigator.clipboard?.write||typeof ClipboardItem==="undefined")throw new Error("このブラウザは画像のクリップボードコピーに対応していません");await navigator.clipboard.write([new ClipboardItem({"image/png":blob})]);}catch(e){alert("QR画像をコピーできませんでした: "+e.message)}};
 $("back10").onclick=()=>{stopAuto();blockIndex=Math.max(0,blockIndex-10);renderBlock()};$("prev").onclick=()=>{stopAuto();if(blockIndex>0){blockIndex--;renderBlock()}};$("next").onclick=()=>{stopAuto();if(blockIndex<blocks.length-1){blockIndex++;renderBlock()}};$("autoToggle").onclick=toggleAuto;
 async function startCamera(){
   if(!navigator.mediaDevices?.getUserMedia){$("recvStatus").textContent="カメラAPIに対応していません";return}
@@ -69,7 +70,7 @@ async function startCamera(){
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
     scanEnableAt=0;
     scanning=false;
-    $("recvStatus").textContent="コードを認識枠内に合わせ、読取開始を押してください";
+    $("recvStatus").classList.remove("singleQRDone");$("recvStatus").classList.add("receiveGuide");$("recvStatus").textContent="コードを認識枠内に合わせ、読取開始を押してください";
   }catch(e){$("recvStatus").textContent="カメラを開始できません: "+e.name}
 }
 function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;const v=$("video");try{v.pause()}catch(e){};if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0;}
@@ -78,7 +79,7 @@ $("startRead").onclick=()=>{
   const b=$("startRead");
   b.disabled=true;
   b.textContent="安定待ち…";
-  $("recvStatus").textContent="端末を動かさず、そのままお待ちください";
+  $("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="端末を動かさず、そのままお待ちください";
   scanning=true;
   scanEnableAt=performance.now()+300;
   if(scanRAF)cancelAnimationFrame(scanRAF);
@@ -133,7 +134,7 @@ function updateRecv(){
     el.classList.remove("hidden");
     el.innerHTML='<span class="label">受信済み</span><span class="current">'+done+'</span><span class="total">/ '+recv.total+'</span>';
   }
-  $("recvStatus").textContent="そのままQRコードにカメラを向けてください";
+  $("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="そのままQRコードにカメラを向けてください";
   $("bar").style.width=(done/recv.total*100)+"%";
 }
 async function copyTextReliable(text){
@@ -152,22 +153,22 @@ async function copyTextReliable(text){
 function showNormal(t){
   normalResultText=String(t??"");
   stopCamera();
-  $("recvStatus").textContent="✓ QRコード 読み取り完了";
+  $("recvStatus").classList.remove("receiveGuide");$("recvStatus").classList.add("singleQRDone");$("recvStatus").textContent="✓ QRコード 読み取り完了";
   $("result").classList.remove("hidden");
   $("result").textContent=normalResultText;
   $("copy").classList.remove("hidden");
   $("save").classList.remove("hidden");
   $("copy").onclick=async()=>{
     const ok=await copyTextReliable(normalResultText);
-    $("recvStatus").textContent=ok?"✓ QRコード 読み取り完了・コピーしました":"✓ QRコード 読み取り完了（コピーに失敗）";
+    $("recvStatus").classList.remove("singleQRDone");$("recvStatus").textContent=ok?"✓ QRコード 読み取り完了・コピーしました":"✓ QRコード 読み取り完了（コピーに失敗）";
   };
   $("save").onclick=()=>download(new TextEncoder().encode(normalResultText),"qr.txt","text/plain");
 }
-function finishRecv(){stopCamera();let data=concat(...recv.parts);$("recvStatus").textContent="✓ 受信完了";$("result").classList.remove("hidden");if(recv.type===1){let t=new TextDecoder().decode(data);$("result").textContent=t;$("copy").classList.remove("hidden");$("copy").onclick=()=>navigator.clipboard.writeText(t);$("save").classList.remove("hidden");$("save").onclick=()=>download(data,"qr通信.txt","text/plain")}else{$("result").textContent=`📄 ${recv.name||"受信ファイル"}  ${data.length.toLocaleString()} bytes`;$("save").classList.remove("hidden");$("save").onclick=()=>download(data,recv.name||"received.bin","application/octet-stream")}}
+function finishRecv(){stopCamera();let data=concat(...recv.parts);$("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="✓ 受信完了";$("result").classList.remove("hidden");if(recv.type===1){let t=new TextDecoder().decode(data);$("result").textContent=t;$("copy").classList.remove("hidden");$("copy").onclick=()=>navigator.clipboard.writeText(t);$("save").classList.remove("hidden");$("save").onclick=()=>download(data,"qr通信.txt","text/plain")}else{$("result").textContent=`📄 ${recv.name||"受信ファイル"}  ${data.length.toLocaleString()} bytes`;$("save").classList.remove("hidden");$("save").onclick=()=>download(data,recv.name||"received.bin","application/octet-stream")}}
 function download(bytes,name,type){let u=URL.createObjectURL(new Blob([bytes],{type})),a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=050").catch(console.error));
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=051").catch(console.error));
 
 if($("autoInterval"))$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value};
 
