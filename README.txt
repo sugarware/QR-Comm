@@ -1,4 +1,4 @@
-QR通信 v0.54 PWA
+QR通信 v0.55 PWA
 
 概要
 - 通常QRコードの表示・読み取り
@@ -8,7 +8,7 @@ QR通信 v0.54 PWA
 - QR通信開始後は後続ブロックを連続受信
 - 通常QR読み取り完了後は認識したQR画像を表示
 - ホーム画面にアプリURLのQRコードを表示
-- 画面にバージョン番号 v0.54 を常時表示
+- 画面にバージョン番号 v0.55 を常時表示
 
 v0.50 changes
 - BARコード読み取り機能を削除
@@ -31,8 +31,8 @@ v0.52 changes
 - Service Workerキャッシュをv0.52へ更新
 
 
-v0.54 changes
-- 仕様書v0.54に基づくハンドシェーク通信を実装
+v0.55 changes
+- 仕様書v0.55に基づくハンドシェーク通信を実装
 - QR通信の新規送信をProtocol Version 02へ更新し、Version 01受信互換を維持
 - 送信画面に「一定間隔自動」「ハンドシェーク」の2方式を追加
 - HandshakeはSession ID 4B、Total/Block番号 2B、ACK Block番号 2Bに対応（最大65535 Block）
@@ -44,9 +44,14 @@ v0.54 changes
 - 最終ACKは受信画面に保持し、送信側は最終ACK認識で「送信完了」表示
 - Total=1ではOutカメラ受信だけで完了し、Inカメラ切替・ACK・位置合わせを省略
 - JPEGを含む一般ファイルを保持したまま転送でき、255 Block超はHandshakeのみ対応
-- Service Workerキャッシュと登録URLをv0.54へ統一
+- Service Workerキャッシュと登録URLをv0.55へ統一
 
 
-v0.54 fix
+v0.55 fix
 - 受信側ACK 2×2表示でcanvasがセル形状に引き伸ばされ、QRが縦方向に潰れる問題を修正
 - ACK canvasを常に正方形として中央配置し、grid内のオーバーフローを防止
+
+
+v0.55 adjustment
+- 位置合わせ時のACK表示を2×2の4個から中央の大きな1個へ変更
+- ACK認識保持時間を250 msから1000 msへ延長し、赤枠と通信再開ボタンのちらつきを抑制
