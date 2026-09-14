@@ -1,4 +1,4 @@
-QR通信 v0.61 PWA
+QR通信 v0.62 PWA
 
 概要
 - 通常QRコードの表示・読み取り
@@ -97,3 +97,15 @@ v0.61
 - ACKスキャンの45ms間引きを廃止し、受信側と同じrequestAnimationFrame周期で解析
 - 中央正方形をカメラ取得解像度のままjsQRへ入力する処理も受信側と同一化
 - 赤枠の時間保持なし、ACK 4隅配置など他の仕様は変更なし
+
+
+v0.62
+- ハンドシェーク方式を削除
+- 送信方式は手動／一定間隔自動のみ
+- 自動送信間隔: 0.05 / 0.06 / 0.07 / 0.08 / 0.09 / 0.10 / 0.15 / 0.20 / 0.25 / 0.3 秒
+- デフォルト自動送信間隔: 0.10秒
+- 新規送信プロトコルをVersion 03へ更新
+- Total BlockおよびBlock Noを2バイト(Big Endian)化、最大65535 Block
+- Start: Magic 4B + Version 1B + Type 1B + Total 2B + Block No 2B
+- Continuation: Short Magic 2B + Block No 2B
+- Version 01 / Version 02 Legacyの受信互換を維持
