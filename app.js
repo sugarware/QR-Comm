@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".p
 let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, normalResultText="";
 let transferSource=null, transferMode="legacy", sessionId=null, senderStream=null, senderRAF=0, senderActive=false, senderAligning=false, senderAckSeenAt=0, senderLastScanAt=0, handshakeComplete=false, pendingHandshakeStart=null, recvAlignmentSeenAt=0, switchingReceiveCamera=false;
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]), ACK=new Uint8Array([0xD3,0x41,0x43]);
-const VERSION1=1, VERSION2=2, ACK_VERSION=1, MODE_LEGACY=0, MODE_HANDSHAKE=1, ALIGN_HOLD_MS=1000, ACK_SCAN_SIZE=320;
+const VERSION1=1, VERSION2=2, ACK_VERSION=1, MODE_LEGACY=0, MODE_HANDSHAKE=1, ALIGN_HOLD_MS=1000;
 
 function go(id){
   stopAuto();stopSenderHandshake();stopCamera();
@@ -101,7 +101,7 @@ function stopSenderHandshake(){if(senderRAF)cancelAnimationFrame(senderRAF);send
 function setSenderAckVisual(on){$("qrCanvas").classList.toggle("ackSeen",!!on);if(senderAligning)$("resumeHandshake").classList.toggle("hidden",!on)}
 function senderScan(now){
   if(!senderActive)return;const v=$("senderVideo"),c=$("senderScanCanvas");
-  if(now-senderLastScanAt>=45&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){senderLastScanAt=now;const ctx=c.getContext("2d",{willReadFrequently:true}),srcSide=Math.min(v.videoWidth,v.videoHeight),sx=Math.floor((v.videoWidth-srcSide)/2),sy=Math.floor((v.videoHeight-srcSide)/2),side=ACK_SCAN_SIZE;c.width=side;c.height=side;ctx.drawImage(v,sx,sy,srcSide,srcSide,0,0,side,side);const im=ctx.getImageData(0,0,side,side),code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"});if(code)handleSenderDecoded(code)}
+  if(now-senderLastScanAt>=45&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){senderLastScanAt=now;const ctx=c.getContext("2d",{willReadFrequently:true}),side=Math.min(v.videoWidth,v.videoHeight),sx=Math.floor((v.videoWidth-side)/2),sy=Math.floor((v.videoHeight-side)/2);c.width=side;c.height=side;ctx.drawImage(v,sx,sy,side,side,0,0,side,side);const im=ctx.getImageData(0,0,side,side),code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"});if(code)handleSenderDecoded(code)}
   if(senderAligning&&performance.now()-senderAckSeenAt>ALIGN_HOLD_MS)setSenderAckVisual(false);
   if(senderActive)senderRAF=requestAnimationFrame(senderScan);
 }
@@ -174,7 +174,7 @@ function download(bytes,name,type){const u=URL.createObjectURL(new Blob([bytes],
 
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=058").catch(console.error));
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=059").catch(console.error));
 if($("autoInterval")){$("autoInterval").value=localStorage.autoInterval||"200";$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value}};
 
 function measureDisplayPeriod(){const o=$("displayDiag");if(!o)return;o.textContent="測定中…";let a=[],last=performance.now(),start=last;function f(now){const d=now-last;last=now;if(d>0&&d<100)a.push(d);if(now-start<1800)return requestAnimationFrame(f);if(a.length){a.sort((x,y)=>x-y);const d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} Hz / ${d.toFixed(1)} ms`}}requestAnimationFrame(f)}
