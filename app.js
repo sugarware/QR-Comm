@@ -94,14 +94,14 @@ async function startHandshakeSend(){
 function cancelHandshakeToLegacy(){stopSenderHandshake();if(!transferSource)return;sessionId=randomSession();const count=Math.max(1,Math.ceil(transferSource.bytes.length/(+$("block").value)));if(count<=255){transferMode="legacy";blocks=makeBlocks(transferSource.bytes,transferSource.type,transferSource.name,MODE_LEGACY,sessionId);blockIndex=0;$("handshakeToggle").textContent="⇄ ハンドシェーク";renderBlock()}else{transferMode="legacy";blocks=[];clearQR();$("sendStatus").textContent=`${count} Block`;$("waitText").textContent="255 Blockを超えるためハンドシェークを開始してください";$("handshakeToggle").textContent="⇄ ハンドシェーク";setLegacyControls(false,true)}}
 async function startSenderCamera(){
   if(!navigator.mediaDevices?.getUserMedia)throw new Error("Camera API unavailable");stopSenderCameraTracks();
-  const v=$("senderVideo");senderStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"user"},width:{ideal:640},height:{ideal:480}},audio:false});v.srcObject=senderStream;await v.play();senderLastScanAt=0;senderAckSeenAt=0;
+  const v=$("senderVideo");senderStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"user"}},audio:false});v.srcObject=senderStream;await v.play();senderLastScanAt=0;senderAckSeenAt=0;
 }
 function stopSenderCameraTracks(){const v=$("senderVideo");try{v.pause()}catch(e){}if(senderStream){senderStream.getTracks().forEach(t=>t.stop());senderStream=null}if(v)v.srcObject=null}
 function stopSenderHandshake(){if(senderRAF)cancelAnimationFrame(senderRAF);senderRAF=0;senderActive=false;senderAligning=false;senderAckSeenAt=0;setSenderAckVisual(false);const r=$("resumeHandshake");if(r)r.classList.add("hidden");stopSenderCameraTracks();const hb=$("handshakeToggle");if(hb)hb.textContent="⇄ ハンドシェーク"}
 function setSenderAckVisual(on){$("qrCanvas").classList.toggle("ackSeen",!!on);if(senderAligning)$("resumeHandshake").classList.toggle("hidden",!on)}
-function senderScan(now){
-  if(!senderActive)return;const v=$("senderVideo"),c=$("senderScanCanvas");
-  if(now-senderLastScanAt>=45&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){senderLastScanAt=now;const ctx=c.getContext("2d",{willReadFrequently:true}),side=Math.min(v.videoWidth,v.videoHeight),sx=Math.floor((v.videoWidth-side)/2),sy=Math.floor((v.videoHeight-side)/2);c.width=side;c.height=side;ctx.drawImage(v,sx,sy,side,side,0,0,side,side);const im=ctx.getImageData(0,0,side,side),code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"}),ackDetected=!!(code&&handleSenderDecoded(code));if(senderAligning)setSenderAckVisual(ackDetected)}
+function senderScan(){
+  if(!senderActive)return;const v=$("senderVideo"),c=$("senderScanCanvas"),ctx=c.getContext("2d",{willReadFrequently:true});
+  if(v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){const side=Math.min(v.videoWidth,v.videoHeight),sx=Math.floor((v.videoWidth-side)/2),sy=Math.floor((v.videoHeight-side)/2);c.width=side;c.height=side;ctx.clearRect(0,0,side,side);ctx.drawImage(v,sx,sy,side,side,0,0,side,side);const im=ctx.getImageData(0,0,side,side),code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"}),ackDetected=!!(code&&handleSenderDecoded(code));if(senderAligning)setSenderAckVisual(ackDetected)}
   if(senderActive)senderRAF=requestAnimationFrame(senderScan);
 }
 function parseAck(b){if(!eq(b,ACK)||b.length<10||b[3]!==ACK_VERSION)return null;return{session:b.slice(4,8),block:(b[8]<<8)|b[9]}}
@@ -173,7 +173,7 @@ function download(bytes,name,type){const u=URL.createObjectURL(new Blob([bytes],
 
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=060").catch(console.error));
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=061").catch(console.error));
 if($("autoInterval")){$("autoInterval").value=localStorage.autoInterval||"200";$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value}};
 
 function measureDisplayPeriod(){const o=$("displayDiag");if(!o)return;o.textContent="測定中…";let a=[],last=performance.now(),start=last;function f(now){const d=now-last;last=now;if(d>0&&d<100)a.push(d);if(now-start<1800)return requestAnimationFrame(f);if(a.length){a.sort((x,y)=>x-y);const d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} Hz / ${d.toFixed(1)} ms`}}requestAnimationFrame(f)}
