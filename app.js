@@ -1,6 +1,7 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
 let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, normalResultText="";
+let qrReader=null, lastScanMode="CENTER";
 let transferSource=null;
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]);
 const VERSION1=1, VERSION2=2, VERSION3=3, MODE_LEGACY=0;
@@ -90,14 +91,56 @@ async function startCamera(facing="environment"){
 }
 async function openReceiveCamera(facing){
   const v=$("video");try{v.pause()}catch(e){}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:false});v.srcObject=stream;await v.play();startCameraPeriodMeasurement(v);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:640},height:{ideal:480}},audio:false});v.srcObject=stream;await v.play();startCameraPeriodMeasurement(v);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 }
 
 function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;const v=$("video");try{v.pause()}catch(e){}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0}
 $("startRead").onclick=()=>{if(!stream)return;const b=$("startRead");b.disabled=true;b.textContent="安定待ち…";$("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="端末を動かさず、そのままお待ちください";scanning=true;scanEnableAt=performance.now()+300;if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=requestAnimationFrame(scan);setTimeout(()=>{if(scanning){b.classList.add("hidden");$("recvStatus").textContent="読取中…"}},300)};
+function getQRReader(){
+  if(qrReader)return qrReader;
+  if(!window.ZXingBrowser||!ZXingBrowser.BrowserQRCodeReader)throw new Error("ZXing Browserを読み込めません");
+  qrReader=new ZXingBrowser.BrowserQRCodeReader();
+  return qrReader;
+}
+function zxingCode(result,offsetX=0,offsetY=0){
+  const pts=(result.getResultPoints?.()||[]).filter(Boolean).map(p=>({x:p.getX()+offsetX,y:p.getY()+offsetY}));
+  let location=null;
+  if(pts.length){
+    const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
+    location={topLeftCorner:{x:minx,y:miny},topRightCorner:{x:maxx,y:miny},bottomRightCorner:{x:maxx,y:maxy},bottomLeftCorner:{x:minx,y:maxy}};
+  }
+  // QR Byte mode の元バイト列を優先する。ZXing の getText() は任意バイナリを
+  // Unicode文字列へ変換するため、0xD3 等が U+FFFD に置換され得る。
+  // ResultMetadataType.BYTE_SEGMENTS (= 2) にはByte modeの実データが保持される。
+  let binaryData=null;
+  try{
+    const meta=result.getResultMetadata?.();
+    const segs=meta?.get?.(2);
+    if(segs&&segs.length){
+      const parts=Array.from(segs,seg=>new Uint8Array(seg));
+      binaryData=concat(...parts);
+    }
+  }catch(_e){}
+  if(!binaryData){const raw=result.getRawBytes?.();if(raw)binaryData=new Uint8Array(raw)}
+  return{data:result.getText?.()||"",binaryData,location};
+}
+function decodeCanvas(canvas,offsetX=0,offsetY=0){
+  try{return zxingCode(getQRReader().decodeFromCanvas(canvas),offsetX,offsetY)}catch(_e){return null}
+}
 function scan(){
-  if(!scanning)return;const v=$("video"),c=$("scanCanvas"),ctx=c.getContext("2d",{willReadFrequently:true});
-  if(performance.now()>=scanEnableAt&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){const side=Math.min(v.videoWidth,v.videoHeight),sx=Math.floor((v.videoWidth-side)/2),sy=Math.floor((v.videoHeight-side)/2);c.width=side;c.height=side;ctx.clearRect(0,0,side,side);ctx.drawImage(v,sx,sy,side,side,0,0,side,side);const im=ctx.getImageData(0,0,side,side),code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"});if(code)handleDecoded(code)}
+  if(!scanning)return;
+  const v=$("video"),scanCanvas=$("scanCanvas"),ctx=scanCanvas.getContext("2d",{willReadFrequently:true});
+  if(performance.now()>=scanEnableAt&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){
+    // v0.71: v0.62との比較用にカメラをVGA (640x480) 優先へ戻す。
+    // ROI追尾は使わず、中央の最大正方形のみを毎回ZXingへ渡す。VGA時は480x480。
+    const side=Math.min(v.videoWidth,v.videoHeight);
+    const sx=Math.floor((v.videoWidth-side)/2),sy=Math.floor((v.videoHeight-side)/2);
+    if(scanCanvas.width!==side||scanCanvas.height!==side){scanCanvas.width=side;scanCanvas.height=side}
+    ctx.drawImage(v,sx,sy,side,side,0,0,side,side);
+    lastScanMode="CENTER";
+    const code=decodeCanvas(scanCanvas);
+    if(code)handleDecoded(code);
+  }
   if(scanning)scanRAF=requestAnimationFrame(scan);
 }
 function captureRecognized(code,sourceCanvas=null){const src=sourceCanvas||$("scanCanvas"),dst=$("capturedCanvas"),v=$("video"),guide=$("cameraGuide");if(!src||!dst||!src.width)return;let x=0,y=0,w=src.width,h=src.height;if(code&&code.location){const pts=[code.location.topLeftCorner,code.location.topRightCorner,code.location.bottomRightCorner,code.location.bottomLeftCorner].filter(Boolean);if(pts.length){const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys),m=Math.max(20,Math.round(Math.max(maxx-minx,maxy-miny)*.18));x=Math.max(0,Math.floor(minx-m));y=Math.max(0,Math.floor(miny-m));w=Math.min(src.width-x,Math.ceil(maxx-minx+2*m));h=Math.min(src.height-y,Math.ceil(maxy-miny+2*m))}}dst.width=Math.max(1,w);dst.height=Math.max(1,h);dst.getContext("2d").drawImage(src,x,y,w,h,0,0,w,h);if(v)v.classList.add("hidden");dst.classList.remove("hidden");if(guide)guide.classList.add("hidden")}
@@ -118,17 +161,33 @@ function parseStart(b){
   let name="";if(type===2){if(p>=b.length)return null;const n=b[p++];if(p+n>b.length)return null;name=new TextDecoder().decode(b.slice(p,p+n));p+=n}
   return{version:ver,type,total,no,name,payload:b.slice(p)};
 }
-function commitStart(s){recv={version:s.version,type:s.type,total:s.total,name:s.name,parts:[s.payload],next:2};updateRecv()}
+function commitStart(s){
+  recv={version:s.version,type:s.type,total:s.total,name:s.name,parts:[s.payload],next:2};
+  updateRecv();
+  $("recvStatus").textContent=`QR通信 v${String(s.version).padStart(2,"0")}：Block 1 / ${s.total} 受信`;
+}
 function handleDecoded(code){
   const b=rawBytes(code),now=performance.now(),start=parseStart(b);
   if(start){
-    if(!recv){commitStart(start);if(start.total===1)finishRecv();return}
+    if(!recv){
+      commitStart(start);
+      // Total=1 の単一Block通信だけ完了。複数Blockでは必ず走査を継続する。
+      if(start.total===1){finishRecv();return}
+      return
+    }
   }
   if(recv&&eq(b,SHORT)){
     let no,p;
     if(recv.version===VERSION3){if(b.length<4)return;no=(b[2]<<8)|b[3];p=4}
     else{if(b.length<3)return;no=b[2];p=3}
     if(no===recv.next){recv.parts.push(b.slice(p));recv.next++;updateRecv();if(no===recv.total)finishRecv();return}
+    $("recvStatus").textContent=`診断: ${lastScanMode} QR認識 / Block ${no}（期待 ${recv.next}）`;
+    return;
+  }
+  if(recv){
+    const hex=Array.from(b.slice(0,8),x=>x.toString(16).padStart(2,"0").toUpperCase()).join(" ");
+    $("recvStatus").textContent=`診断: ${lastScanMode} QR認識 / ${hex||"byteなし"} / ${b.length}B`;
+    return;
   }
   if(!recv){const key=(code.data||"")+"|"+b.length+"|"+Array.from(b.slice(0,12)).join(",");if(key===lastSeenKey&&now-lastSeenAt<350)return;lastSeenKey=key;lastSeenAt=now;const text=String(code.data||"");if(!text)return;captureRecognized(code);showNormal(text)}
 }
@@ -142,7 +201,7 @@ function download(bytes,name,type){const u=URL.createObjectURL(new Blob([bytes],
 
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=062").catch(console.error));
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=063").catch(console.error));
 if($("autoInterval")){$("autoInterval").value=localStorage.autoInterval||"100";$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value}};
 
 function measureDisplayPeriod(){const o=$("displayDiag");if(!o)return;o.textContent="測定中…";let a=[],last=performance.now(),start=last;function f(now){const d=now-last;last=now;if(d>0&&d<100)a.push(d);if(now-start<1800)return requestAnimationFrame(f);if(a.length){a.sort((x,y)=>x-y);const d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} Hz / ${d.toFixed(1)} ms`}}requestAnimationFrame(f)}
