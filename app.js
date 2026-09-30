@@ -1,8 +1,7 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
 let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, normalResultText="";
-let qrReader=null, trackROI=null, lastScanMode="FULL";
-const ROI_MARGIN=0.50;
+let qrReader=null, lastScanMode="CENTER";
 let transferSource=null;
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]);
 const VERSION1=1, VERSION2=2, VERSION3=3, MODE_LEGACY=0;
@@ -20,7 +19,7 @@ back.onclick=()=>go("home");$("end").onclick=()=>go("home");$("stop").onclick=()
 
 function resetReceiveState(){
   recv=null;
-  scanning=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0; trackROI=null;
+  scanning=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
   $("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="コードを認識枠内に合わせてください";
   const startBtn=$("startRead");if(startBtn){startBtn.classList.remove("hidden");startBtn.disabled=false;startBtn.textContent="読取開始";}
   const rbs=$("receiveBlockStatus");if(rbs){rbs.classList.add("hidden");rbs.innerHTML="";}
@@ -95,8 +94,8 @@ async function openReceiveCamera(facing){
   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1024},height:{ideal:768}},audio:false});v.srcObject=stream;await v.play();startCameraPeriodMeasurement(v);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 }
 
-function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;trackROI=null;const v=$("video");try{v.pause()}catch(e){}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0}
-$("startRead").onclick=()=>{if(!stream)return;const b=$("startRead");b.disabled=true;b.textContent="安定待ち…";$("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="端末を動かさず、そのままお待ちください";scanning=true;trackROI=null;scanEnableAt=performance.now()+300;if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=requestAnimationFrame(scan);setTimeout(()=>{if(scanning){b.classList.add("hidden");$("recvStatus").textContent="読取中…"}},300)};
+function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;const v=$("video");try{v.pause()}catch(e){}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0}
+$("startRead").onclick=()=>{if(!stream)return;const b=$("startRead");b.disabled=true;b.textContent="安定待ち…";$("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="端末を動かさず、そのままお待ちください";scanning=true;scanEnableAt=performance.now()+300;if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=requestAnimationFrame(scan);setTimeout(()=>{if(scanning){b.classList.add("hidden");$("recvStatus").textContent="読取中…"}},300)};
 function getQRReader(){
   if(qrReader)return qrReader;
   if(!window.ZXingBrowser||!ZXingBrowser.BrowserQRCodeReader)throw new Error("ZXing Browserを読み込めません");
@@ -125,36 +124,21 @@ function zxingCode(result,offsetX=0,offsetY=0){
   if(!binaryData){const raw=result.getRawBytes?.();if(raw)binaryData=new Uint8Array(raw)}
   return{data:result.getText?.()||"",binaryData,location};
 }
-function roiFromCode(code,w,h){
-  if(!code?.location)return null;
-  const pts=[code.location.topLeftCorner,code.location.topRightCorner,code.location.bottomRightCorner,code.location.bottomLeftCorner].filter(Boolean);
-  if(!pts.length)return null;
-  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
-  const side=Math.max(maxx-minx,maxy-miny);if(side<8)return null;
-  const m=Math.max(24,Math.round(side*ROI_MARGIN));
-  const x=Math.max(0,Math.floor(minx-m)),y=Math.max(0,Math.floor(miny-m));
-  return{x,y,w:Math.max(1,Math.min(w-x,Math.ceil(maxx-minx+2*m))),h:Math.max(1,Math.min(h-y,Math.ceil(maxy-miny+2*m)))};
-}
 function decodeCanvas(canvas,offsetX=0,offsetY=0){
   try{return zxingCode(getQRReader().decodeFromCanvas(canvas),offsetX,offsetY)}catch(_e){return null}
 }
 function scan(){
-  if(!scanning)return;const v=$("video"),full=$("scanCanvas"),ctx=full.getContext("2d",{willReadFrequently:true});
+  if(!scanning)return;
+  const v=$("video"),scanCanvas=$("scanCanvas"),ctx=scanCanvas.getContext("2d",{willReadFrequently:true});
   if(performance.now()>=scanEnableAt&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){
-    if(full.width!==v.videoWidth||full.height!==v.videoHeight){full.width=v.videoWidth;full.height=v.videoHeight}
-    ctx.drawImage(v,0,0,full.width,full.height);
-    let code=null;
-    if(trackROI){
-      lastScanMode="ROI";
-      let rc=$("roiScanCanvas");if(!rc){rc=document.createElement("canvas");rc.id="roiScanCanvas"}
-      rc.width=trackROI.w;rc.height=trackROI.h;rc.getContext("2d",{willReadFrequently:true}).drawImage(full,trackROI.x,trackROI.y,trackROI.w,trackROI.h,0,0,trackROI.w,trackROI.h);
-      code=decodeCanvas(rc,trackROI.x,trackROI.y);
-      if(code)trackROI=roiFromCode(code,full.width,full.height);else trackROI=null;
-    }else{
-      lastScanMode="FULL";
-      code=decodeCanvas(full);
-      if(code)trackROI=roiFromCode(code,full.width,full.height);
-    }
+    // v0.70: ROI追尾を廃止。カメラ画像中央の最大正方形だけを毎回ZXingへ渡す。
+    // XGA (1024x768) なら常に中央 768x768。
+    const side=Math.min(v.videoWidth,v.videoHeight);
+    const sx=Math.floor((v.videoWidth-side)/2),sy=Math.floor((v.videoHeight-side)/2);
+    if(scanCanvas.width!==side||scanCanvas.height!==side){scanCanvas.width=side;scanCanvas.height=side}
+    ctx.drawImage(v,sx,sy,side,side,0,0,side,side);
+    lastScanMode="CENTER";
+    const code=decodeCanvas(scanCanvas);
     if(code)handleDecoded(code);
   }
   if(scanning)scanRAF=requestAnimationFrame(scan);
