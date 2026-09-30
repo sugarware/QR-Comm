@@ -124,7 +124,7 @@ function roiFromCode(code,w,h){
   return{x,y,w:Math.max(1,Math.min(w-x,Math.ceil(maxx-minx+2*m))),h:Math.max(1,Math.min(h-y,Math.ceil(maxy-miny+2*m)))};
 }
 function decodeCanvas(canvas,offsetX=0,offsetY=0){
-  try{return zxingCode(getQRReader().decodeFromCanvas(canvas),offsetX,offsetY)}catch(_e){return null}
+  try{return zxingCode(getQRReader().decode(canvas),offsetX,offsetY)}catch(_e){return null}
 }
 function scan(){
   if(!scanning)return;const v=$("video"),full=$("scanCanvas"),ctx=full.getContext("2d",{willReadFrequently:true});

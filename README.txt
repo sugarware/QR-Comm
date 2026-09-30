@@ -1,4 +1,4 @@
-QR通信 v0.63 PWA
+QR通信 v0.64 PWA
 
 概要
 - 通常QRコードの表示・読み取り
@@ -111,7 +111,7 @@ v0.62
 - Version 01 / Version 02 Legacyの受信互換を維持
 
 
-v0.63
+v0.64
 - 受信デコーダをjsQRからZXing BrowserQRCodeReaderへ変更（QR専用）
 - Outカメラは1920x1080をideal指定
 - 初回/再探索時はカメラ全画素をデコード
