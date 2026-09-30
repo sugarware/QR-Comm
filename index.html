@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.75</title>
+<title>QR通信 v0.76</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -231,6 +231,24 @@ header #settingsHome{
 .sendModes{display:block}
 .sendModes button{min-height:68px!important;font-size:20px!important;width:100%}
 </style>
+
+<style>
+/* v0.76: fixed-screen UI / displayed-text selection disabled */
+html,body{height:100%;height:100dvh;overflow:hidden!important;-webkit-user-select:none;user-select:none}
+body{padding-bottom:0!important}
+main{height:calc(100dvh - 56px);overflow:hidden}
+.page{height:100%;max-height:100%;overflow:hidden!important}
+textarea,input,select{ -webkit-user-select:text;user-select:text }
+#settings{padding-top:10px!important;padding-bottom:10px!important}
+#settings .parameterGroup{border:1px solid var(--line);border-radius:16px;padding:10px 12px;margin:8px 0;background:rgba(255,255,255,.72)}
+#settings .parameterGroup h3{margin:0 0 6px;font-size:17px}
+#settings .card{padding:7px 9px;margin:5px 0;border-radius:11px}
+#settings .card .muted{margin:5px 0 0;font-size:12px}
+#settings .settingsGroup{padding-top:8px;margin-top:8px}
+#settings .settingsGroup h3{margin:0 0 5px}
+#settings #diagBox{padding:7px 9px;line-height:1.45}
+#settings #measureDisplay{padding:7px 10px;margin-top:5px}
+</style>
 </head>
 <body>
 <div id="appVersionBadge" aria-label="バージョン">v0.73</div>
@@ -272,62 +290,22 @@ header #settingsHome{
 <div class="row"><button id="copy" class="hidden">コピー</button><button id="save" class="hidden">ファイル保存</button><button id="stop">閉じる</button></div>
 </section>
 <section id="settings" class="page">
-<div class="card">
-  <label>ブロックサイズ　
-    <select id="block">
-      <option>64</option><option>128</option><option>256</option><option>512</option><option selected>768</option><option>1024</option>
-    </select> B
-  </label>
+<div class="parameterGroup">
+  <h3>送信パラメータ</h3>
+  <div class="card"><label>ブロックサイズ　<select id="block"><option>64</option><option>128</option><option>256</option><option selected>512</option><option>768</option><option>1024</option></select> B</label></div>
+  <div class="card"><label>自動送信間隔　<select id="autoInterval"><option value="50">0.05秒</option><option value="60">0.06秒</option><option value="70">0.07秒</option><option value="80">0.08秒</option><option value="90">0.09秒</option><option value="100">0.10秒</option><option value="110">0.11秒</option><option value="120">0.12秒</option><option value="130">0.13秒</option><option value="140">0.14秒</option><option value="150" selected>0.15秒</option><option value="200">0.20秒</option><option value="250">0.25秒</option><option value="300">0.3秒</option></select></label></div>
+  <div class="card"><label>誤り訂正　<select id="ecc"><option>L</option><option selected>M</option><option>Q</option><option>H</option></select></label><p class="muted">高くすると読み取り耐性が上がりますが、QRコードが高密度になります。</p></div>
 </div>
-<div class="card">
-  <label>カメラ解像度　
-    <select id="cameraResolution">
-      <option value="vga" selected>VGA（640×480）</option>
-      <option value="xga">XGA（1024×768）</option>
-    </select>
-  </label>
-</div>
-<div class="card">
-  <label>カメラフレームレート　
-    <select id="cameraFrameRate">
-      <option value="30">30 fps</option>
-      <option value="60" selected>60 fps</option>
-    </select>
-  </label>
-  <p class="muted">端末・ブラウザが対応する範囲で要求します。実効fpsは診断欄で確認できます。</p>
-</div>
-<div class="card">
-  <label>自動送信間隔　
-    <select id="autoInterval">
-      <option value="50">0.05秒</option>
-      <option value="60">0.06秒</option>
-      <option value="70">0.07秒</option>
-      <option value="80" selected>0.08秒</option>
-      <option value="90">0.09秒</option>
-      <option value="100">0.10秒</option>
-      <option value="110">0.11秒</option>
-      <option value="120">0.12秒</option>
-      <option value="130">0.13秒</option>
-      <option value="140">0.14秒</option>
-      <option value="150">0.15秒</option>
-      <option value="200">0.20秒</option>
-      <option value="250">0.25秒</option>
-      <option value="300">0.3秒</option>
-    </select>
-  </label>
-</div>
-<div class="card">
-  <label>誤り訂正　
-    <select id="ecc">
-      <option>L</option><option selected>M</option><option>Q</option><option>H</option>
-    </select>
-  </label>
-  <p class="muted">高くすると読み取り耐性が上がりますが、QRコードが高密度になります。</p>
+<div class="parameterGroup">
+  <h3>受信パラメータ</h3>
+  <div class="card"><label>カメラ解像度　<select id="cameraResolution"><option value="vga">VGA（640×480）</option><option value="xga" selected>XGA（1024×768）</option></select></label></div>
+  <div class="card"><label>フレームレート　<select id="cameraFrameRate"><option value="30">30 fps</option><option value="60" selected>60 fps</option></select></label><p class="muted">端末・ブラウザが対応する範囲で要求します。実効fpsは診断欄で確認できます。</p></div>
 </div>
 <div class="card"><b>プロトコル</b><p class="muted">Version 03: Start Magic 4B / Version 1B / Type 1B / Total 2B / Block 2B<br>継続: Short Magic 2B / Block 2B。Version 01 / 02（従来Legacy）受信互換。</p></div>
-<div class="settingsGroup"><h3>診断</h3><div id="diagBox"><div>画面更新: <span id="displayDiag">未測定</span></div><div>カメラ: <span id="cameraDiag">受信画面で測定</span></div></div><button id="measureDisplay" type="button">画面周期を測定</button><div class="muted">ブラウザから見た実効周期です。</div></div></section>
+<div class="settingsGroup"><h3>診断</h3><div id="diagBox"><div>画面更新: <span id="displayDiag">未測定</span></div><div>カメラ: <span id="cameraDiag">受信画面で測定</span></div></div><button id="measureDisplay" type="button">画面周期を測定</button><div class="muted">ブラウザから見た実効周期です。</div></div>
+</section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="app.js?v=074"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="app.js?v=076"></script>
 </body></html><style>
 #home{position:relative}
 #settingsHome{position:absolute!important;right:12px!important;top:12px!important;width:48px!important;height:48px!important;min-height:48px!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:28px!important;line-height:1!important;z-index:2}
