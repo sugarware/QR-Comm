@@ -110,8 +110,20 @@ function zxingCode(result,offsetX=0,offsetY=0){
     const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
     location={topLeftCorner:{x:minx,y:miny},topRightCorner:{x:maxx,y:miny},bottomRightCorner:{x:maxx,y:maxy},bottomLeftCorner:{x:minx,y:maxy}};
   }
-  const raw=result.getRawBytes?.();
-  return{data:result.getText?.()||"",binaryData:raw?new Uint8Array(raw):null,location};
+  // QR Byte mode の元バイト列を優先する。ZXing の getText() は任意バイナリを
+  // Unicode文字列へ変換するため、0xD3 等が U+FFFD に置換され得る。
+  // ResultMetadataType.BYTE_SEGMENTS (= 2) にはByte modeの実データが保持される。
+  let binaryData=null;
+  try{
+    const meta=result.getResultMetadata?.();
+    const segs=meta?.get?.(2);
+    if(segs&&segs.length){
+      const parts=Array.from(segs,seg=>new Uint8Array(seg));
+      binaryData=concat(...parts);
+    }
+  }catch(_e){}
+  if(!binaryData){const raw=result.getRawBytes?.();if(raw)binaryData=new Uint8Array(raw)}
+  return{data:result.getText?.()||"",binaryData,location};
 }
 function roiFromCode(code,w,h){
   if(!code?.location)return null;
