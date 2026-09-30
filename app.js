@@ -90,7 +90,8 @@ async function startCamera(facing="environment"){
 }
 async function openReceiveCamera(facing){
   const v=$("video");try{v.pause()}catch(e){}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1024},height:{ideal:768}},audio:false});v.srcObject=stream;await v.play();startCameraPeriodMeasurement(v);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  const res=($("cameraResolution")&&$("cameraResolution").value)||localStorage.cameraResolution||"xga",fps=parseInt((($("cameraFrameRate")&&$("cameraFrameRate").value)||localStorage.cameraFrameRate||"30"),10),w=res==="vga"?640:1024,h=res==="vga"?480:768;
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:w},height:{ideal:h},frameRate:{ideal:fps}},audio:false});v.srcObject=stream;await v.play();startCameraPeriodMeasurement(v);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 }
 
 function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;const v=$("video");try{v.pause()}catch(e){}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0}
@@ -141,8 +142,9 @@ function mimeFromName(name=""){const n=name.toLowerCase();if(n.endsWith(".jpg")|
 function download(bytes,name,type){const u=URL.createObjectURL(new Blob([bytes],{type})),a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 
 $("block").value=localStorage.block||"768";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
+if($("cameraResolution")){$("cameraResolution").value=localStorage.cameraResolution||"xga";$("cameraResolution").onchange=e=>localStorage.cameraResolution=e.target.value}if($("cameraFrameRate")){$("cameraFrameRate").value=localStorage.cameraFrameRate||"30";$("cameraFrameRate").onchange=e=>localStorage.cameraFrameRate=e.target.value}
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=073").catch(console.error));
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=074").catch(console.error));
 if($("autoInterval")){$("autoInterval").value=localStorage.autoInterval||"100";$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value}};
 
 function measureDisplayPeriod(){const o=$("displayDiag");if(!o)return;o.textContent="測定中…";let a=[],last=performance.now(),start=last;function f(now){const d=now-last;last=now;if(d>0&&d<100)a.push(d);if(now-start<1800)return requestAnimationFrame(f);if(a.length){a.sort((x,y)=>x-y);const d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} Hz / ${d.toFixed(1)} ms`}}requestAnimationFrame(f)}
