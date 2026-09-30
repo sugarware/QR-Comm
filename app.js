@@ -30,7 +30,7 @@ function senderStatus(){if(!blocks.length)return;$("sendStatus").innerHTML='<div
 function receiverStatus(done,total){const el=$("receiveBlockStatus");if(!el)return;el.classList.remove("hidden");el.innerHTML='<span class="label">受信済み</span><span class="current">'+done+'</span><span class="total">/ '+total+'</span>';}
 
 function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null}autoRunning=false;const b=$("autoToggle");if(b){b.textContent="▶ 一定間隔自動";b.disabled=!blocks.length}}
-function startAuto(){if(!blocks.length||autoRunning)return;autoRunning=true;const b=$("autoToggle");if(b)b.textContent="⏸ 停止";const intervalMs=parseInt(($("autoInterval")&&$("autoInterval").value)||localStorage.autoInterval||"100",10);autoTimer=setInterval(()=>{if(blockIndex>=blocks.length-1){stopAuto();return}blockIndex++;renderBlock();},intervalMs)}
+function startAuto(){if(!blocks.length||autoRunning)return;autoRunning=true;const b=$("autoToggle");if(b)b.textContent="⏸ 停止";const intervalMs=parseInt(($("autoInterval")&&$("autoInterval").value)||localStorage.autoInterval||"80",10);autoTimer=setInterval(()=>{if(blockIndex>=blocks.length-1){stopAuto();return}blockIndex++;renderBlock();},intervalMs)}
 function toggleAuto(){autoRunning?stopAuto():startAuto()}
 
 $("fileBtn").onclick=()=>$("file").click();
@@ -90,7 +90,7 @@ async function startCamera(facing="environment"){
 }
 async function openReceiveCamera(facing){
   const v=$("video");try{v.pause()}catch(e){}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;
-  const res=($("cameraResolution")&&$("cameraResolution").value)||localStorage.cameraResolution||"xga",fps=parseInt((($("cameraFrameRate")&&$("cameraFrameRate").value)||localStorage.cameraFrameRate||"30"),10),w=res==="vga"?640:1024,h=res==="vga"?480:768;
+  const res=($("cameraResolution")&&$("cameraResolution").value)||localStorage.cameraResolution||"vga",fps=parseInt((($("cameraFrameRate")&&$("cameraFrameRate").value)||localStorage.cameraFrameRate||"60"),10),w=res==="vga"?640:1024,h=res==="vga"?480:768;
   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:w},height:{ideal:h},frameRate:{ideal:fps}},audio:false});v.srcObject=stream;await v.play();startCameraPeriodMeasurement(v);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 }
 
@@ -142,10 +142,10 @@ function mimeFromName(name=""){const n=name.toLowerCase();if(n.endsWith(".jpg")|
 function download(bytes,name,type){const u=URL.createObjectURL(new Blob([bytes],{type})),a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 
 $("block").value=localStorage.block||"768";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
-if($("cameraResolution")){$("cameraResolution").value=localStorage.cameraResolution||"xga";$("cameraResolution").onchange=e=>localStorage.cameraResolution=e.target.value}if($("cameraFrameRate")){$("cameraFrameRate").value=localStorage.cameraFrameRate||"30";$("cameraFrameRate").onchange=e=>localStorage.cameraFrameRate=e.target.value}
+if($("cameraResolution")){$("cameraResolution").value=localStorage.cameraResolution||"vga";$("cameraResolution").onchange=e=>localStorage.cameraResolution=e.target.value}if($("cameraFrameRate")){$("cameraFrameRate").value=localStorage.cameraFrameRate||"60";$("cameraFrameRate").onchange=e=>localStorage.cameraFrameRate=e.target.value}
 drawHomeQR();
 if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=074").catch(console.error));
-if($("autoInterval")){$("autoInterval").value=localStorage.autoInterval||"100";$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value}};
+if($("autoInterval")){$("autoInterval").value=localStorage.autoInterval||"80";$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value}};
 
 function measureDisplayPeriod(){const o=$("displayDiag");if(!o)return;o.textContent="測定中…";let a=[],last=performance.now(),start=last;function f(now){const d=now-last;last=now;if(d>0&&d<100)a.push(d);if(now-start<1800)return requestAnimationFrame(f);if(a.length){a.sort((x,y)=>x-y);const d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} Hz / ${d.toFixed(1)} ms`}}requestAnimationFrame(f)}
 function startCameraPeriodMeasurement(v){const o=$("cameraDiag");if(!o||!v)return;o.textContent="測定中…";let finished=false;const finish=fps=>{if(finished)return;finished=true;if(Number.isFinite(fps)&&fps>1){const ms=1000/fps;o.textContent=`${fps.toFixed(1)} fps / ${ms.toFixed(1)} ms`}else o.textContent="測定できません"};if(typeof v.requestVideoFrameCallback==="function"){let count=0,first=null,last=null;const cb=now=>{if(finished)return;if(first===null)first=now;last=now;count++;if(now-first>=2200){const elapsed=(last-first)/1000;finish(elapsed>0?(count-1)/elapsed:NaN);return}v.requestVideoFrameCallback(cb)};v.requestVideoFrameCallback(cb);setTimeout(()=>{if(!finished&&count<3)measureCameraByCurrentTime(v,finish)},2600);return}measureCameraByCurrentTime(v,finish)}
