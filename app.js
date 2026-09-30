@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
 let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, normalResultText="";
 let qrReader=null, trackROI=null;
-const ROI_MARGIN=0.25;
+const ROI_MARGIN=0.50;
 let transferSource=null;
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]);
 const VERSION1=1, VERSION2=2, VERSION3=3, MODE_LEGACY=0;
@@ -163,11 +163,20 @@ function parseStart(b){
   let name="";if(type===2){if(p>=b.length)return null;const n=b[p++];if(p+n>b.length)return null;name=new TextDecoder().decode(b.slice(p,p+n));p+=n}
   return{version:ver,type,total,no,name,payload:b.slice(p)};
 }
-function commitStart(s){recv={version:s.version,type:s.type,total:s.total,name:s.name,parts:[s.payload],next:2};updateRecv()}
+function commitStart(s){
+  recv={version:s.version,type:s.type,total:s.total,name:s.name,parts:[s.payload],next:2};
+  updateRecv();
+  $("recvStatus").textContent=`QR通信 v${String(s.version).padStart(2,"0")}：Block 1 / ${s.total} 受信`;
+}
 function handleDecoded(code){
   const b=rawBytes(code),now=performance.now(),start=parseStart(b);
   if(start){
-    if(!recv){commitStart(start);if(start.total===1)finishRecv();return}
+    if(!recv){
+      commitStart(start);
+      // Total=1 の単一Block通信だけ完了。複数Blockでは必ず走査を継続する。
+      if(start.total===1){finishRecv();return}
+      return
+    }
   }
   if(recv&&eq(b,SHORT)){
     let no,p;
