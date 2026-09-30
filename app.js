@@ -99,8 +99,8 @@ function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scannin
 $("startRead").onclick=()=>{if(!stream)return;const b=$("startRead");b.disabled=true;b.textContent="安定待ち…";$("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="端末を動かさず、そのままお待ちください";scanning=true;trackROI=null;scanEnableAt=performance.now()+300;if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=requestAnimationFrame(scan);setTimeout(()=>{if(scanning){b.classList.add("hidden");$("recvStatus").textContent="読取中…"}},300)};
 function getQRReader(){
   if(qrReader)return qrReader;
-  if(!window.ZXing||!ZXing.BrowserQRCodeReader)throw new Error("ZXingを読み込めません");
-  qrReader=new ZXing.BrowserQRCodeReader();
+  if(!window.ZXingBrowser||!ZXingBrowser.BrowserQRCodeReader)throw new Error("ZXing Browserを読み込めません");
+  qrReader=new ZXingBrowser.BrowserQRCodeReader();
   return qrReader;
 }
 function zxingCode(result,offsetX=0,offsetY=0){
@@ -124,7 +124,7 @@ function roiFromCode(code,w,h){
   return{x,y,w:Math.max(1,Math.min(w-x,Math.ceil(maxx-minx+2*m))),h:Math.max(1,Math.min(h-y,Math.ceil(maxy-miny+2*m)))};
 }
 function decodeCanvas(canvas,offsetX=0,offsetY=0){
-  try{return zxingCode(getQRReader().decode(canvas),offsetX,offsetY)}catch(_e){return null}
+  try{return zxingCode(getQRReader().decodeFromCanvas(canvas),offsetX,offsetY)}catch(_e){return null}
 }
 function scan(){
   if(!scanning)return;const v=$("video"),full=$("scanCanvas"),ctx=full.getContext("2d",{willReadFrequently:true});
