@@ -1,6 +1,8 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
 let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, normalResultText="";
+let qrReader=null, trackROI=null;
+const ROI_MARGIN=0.25;
 let transferSource=null;
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]);
 const VERSION1=1, VERSION2=2, VERSION3=3, MODE_LEGACY=0;
@@ -18,7 +20,7 @@ back.onclick=()=>go("home");$("end").onclick=()=>go("home");$("stop").onclick=()
 
 function resetReceiveState(){
   recv=null;
-  scanning=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
+  scanning=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0; trackROI=null;
   $("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="コードを認識枠内に合わせてください";
   const startBtn=$("startRead");if(startBtn){startBtn.classList.remove("hidden");startBtn.disabled=false;startBtn.textContent="読取開始";}
   const rbs=$("receiveBlockStatus");if(rbs){rbs.classList.add("hidden");rbs.innerHTML="";}
@@ -90,14 +92,57 @@ async function startCamera(facing="environment"){
 }
 async function openReceiveCamera(facing){
   const v=$("video");try{v.pause()}catch(e){}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:false});v.srcObject=stream;await v.play();startCameraPeriodMeasurement(v);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1920},height:{ideal:1080}},audio:false});v.srcObject=stream;await v.play();startCameraPeriodMeasurement(v);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 }
 
-function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;const v=$("video");try{v.pause()}catch(e){}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0}
-$("startRead").onclick=()=>{if(!stream)return;const b=$("startRead");b.disabled=true;b.textContent="安定待ち…";$("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="端末を動かさず、そのままお待ちください";scanning=true;scanEnableAt=performance.now()+300;if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=requestAnimationFrame(scan);setTimeout(()=>{if(scanning){b.classList.add("hidden");$("recvStatus").textContent="読取中…"}},300)};
+function stopCamera(){if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=0;scanning=false;trackROI=null;const v=$("video");try{v.pause()}catch(e){}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;scanEnableAt=0}
+$("startRead").onclick=()=>{if(!stream)return;const b=$("startRead");b.disabled=true;b.textContent="安定待ち…";$("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="端末を動かさず、そのままお待ちください";scanning=true;trackROI=null;scanEnableAt=performance.now()+300;if(scanRAF)cancelAnimationFrame(scanRAF);scanRAF=requestAnimationFrame(scan);setTimeout(()=>{if(scanning){b.classList.add("hidden");$("recvStatus").textContent="読取中…"}},300)};
+function getQRReader(){
+  if(qrReader)return qrReader;
+  if(!window.ZXing||!ZXing.BrowserQRCodeReader)throw new Error("ZXingを読み込めません");
+  qrReader=new ZXing.BrowserQRCodeReader();
+  return qrReader;
+}
+function zxingCode(result,offsetX=0,offsetY=0){
+  const pts=(result.getResultPoints?.()||[]).filter(Boolean).map(p=>({x:p.getX()+offsetX,y:p.getY()+offsetY}));
+  let location=null;
+  if(pts.length){
+    const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
+    location={topLeftCorner:{x:minx,y:miny},topRightCorner:{x:maxx,y:miny},bottomRightCorner:{x:maxx,y:maxy},bottomLeftCorner:{x:minx,y:maxy}};
+  }
+  const raw=result.getRawBytes?.();
+  return{data:result.getText?.()||"",binaryData:raw?new Uint8Array(raw):null,location};
+}
+function roiFromCode(code,w,h){
+  if(!code?.location)return null;
+  const pts=[code.location.topLeftCorner,code.location.topRightCorner,code.location.bottomRightCorner,code.location.bottomLeftCorner].filter(Boolean);
+  if(!pts.length)return null;
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
+  const side=Math.max(maxx-minx,maxy-miny);if(side<8)return null;
+  const m=Math.max(24,Math.round(side*ROI_MARGIN));
+  const x=Math.max(0,Math.floor(minx-m)),y=Math.max(0,Math.floor(miny-m));
+  return{x,y,w:Math.max(1,Math.min(w-x,Math.ceil(maxx-minx+2*m))),h:Math.max(1,Math.min(h-y,Math.ceil(maxy-miny+2*m)))};
+}
+function decodeCanvas(canvas,offsetX=0,offsetY=0){
+  try{return zxingCode(getQRReader().decodeFromCanvas(canvas),offsetX,offsetY)}catch(_e){return null}
+}
 function scan(){
-  if(!scanning)return;const v=$("video"),c=$("scanCanvas"),ctx=c.getContext("2d",{willReadFrequently:true});
-  if(performance.now()>=scanEnableAt&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){const side=Math.min(v.videoWidth,v.videoHeight),sx=Math.floor((v.videoWidth-side)/2),sy=Math.floor((v.videoHeight-side)/2);c.width=side;c.height=side;ctx.clearRect(0,0,side,side);ctx.drawImage(v,sx,sy,side,side,0,0,side,side);const im=ctx.getImageData(0,0,side,side),code=window.jsQR&&jsQR(im.data,side,side,{inversionAttempts:"dontInvert"});if(code)handleDecoded(code)}
+  if(!scanning)return;const v=$("video"),full=$("scanCanvas"),ctx=full.getContext("2d",{willReadFrequently:true});
+  if(performance.now()>=scanEnableAt&&v.readyState>=2&&v.videoWidth>0&&v.videoHeight>0){
+    if(full.width!==v.videoWidth||full.height!==v.videoHeight){full.width=v.videoWidth;full.height=v.videoHeight}
+    ctx.drawImage(v,0,0,full.width,full.height);
+    let code=null;
+    if(trackROI){
+      let rc=$("roiScanCanvas");if(!rc){rc=document.createElement("canvas");rc.id="roiScanCanvas"}
+      rc.width=trackROI.w;rc.height=trackROI.h;rc.getContext("2d",{willReadFrequently:true}).drawImage(full,trackROI.x,trackROI.y,trackROI.w,trackROI.h,0,0,trackROI.w,trackROI.h);
+      code=decodeCanvas(rc,trackROI.x,trackROI.y);
+      if(code)trackROI=roiFromCode(code,full.width,full.height);else trackROI=null;
+    }else{
+      code=decodeCanvas(full);
+      if(code)trackROI=roiFromCode(code,full.width,full.height);
+    }
+    if(code)handleDecoded(code);
+  }
   if(scanning)scanRAF=requestAnimationFrame(scan);
 }
 function captureRecognized(code,sourceCanvas=null){const src=sourceCanvas||$("scanCanvas"),dst=$("capturedCanvas"),v=$("video"),guide=$("cameraGuide");if(!src||!dst||!src.width)return;let x=0,y=0,w=src.width,h=src.height;if(code&&code.location){const pts=[code.location.topLeftCorner,code.location.topRightCorner,code.location.bottomRightCorner,code.location.bottomLeftCorner].filter(Boolean);if(pts.length){const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys),m=Math.max(20,Math.round(Math.max(maxx-minx,maxy-miny)*.18));x=Math.max(0,Math.floor(minx-m));y=Math.max(0,Math.floor(miny-m));w=Math.min(src.width-x,Math.ceil(maxx-minx+2*m));h=Math.min(src.height-y,Math.ceil(maxy-miny+2*m))}}dst.width=Math.max(1,w);dst.height=Math.max(1,h);dst.getContext("2d").drawImage(src,x,y,w,h,0,0,w,h);if(v)v.classList.add("hidden");dst.classList.remove("hidden");if(guide)guide.classList.add("hidden")}
@@ -142,7 +187,7 @@ function download(bytes,name,type){const u=URL.createObjectURL(new Blob([bytes],
 
 $("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=062").catch(console.error));
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=063").catch(console.error));
 if($("autoInterval")){$("autoInterval").value=localStorage.autoInterval||"100";$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value}};
 
 function measureDisplayPeriod(){const o=$("displayDiag");if(!o)return;o.textContent="測定中…";let a=[],last=performance.now(),start=last;function f(now){const d=now-last;last=now;if(d>0&&d<100)a.push(d);if(now-start<1800)return requestAnimationFrame(f);if(a.length){a.sort((x,y)=>x-y);const d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} Hz / ${d.toFixed(1)} ms`}}requestAnimationFrame(f)}

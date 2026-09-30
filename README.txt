@@ -1,4 +1,4 @@
-QR通信 v0.62 PWA
+QR通信 v0.63 PWA
 
 概要
 - 通常QRコードの表示・読み取り
@@ -109,3 +109,12 @@ v0.62
 - Start: Magic 4B + Version 1B + Type 1B + Total 2B + Block No 2B
 - Continuation: Short Magic 2B + Block No 2B
 - Version 01 / Version 02 Legacyの受信互換を維持
+
+
+v0.63
+- 受信デコーダをjsQRからZXing BrowserQRCodeReaderへ変更（QR専用）
+- Outカメラは1920x1080をideal指定
+- 初回/再探索時はカメラ全画素をデコード
+- QR検出後は検出領域+25%マージンのROIのみをデコード
+- ROIで検出できなかった場合、次フレームは全画面探索へ復帰
+- QR通信プロトコル、送信処理、Version 01/02/03受信互換は変更なし
