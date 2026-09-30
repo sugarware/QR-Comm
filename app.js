@@ -1,7 +1,7 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id), pages=[...document.querySelectorAll(".page")], back=$("back"), title=$("title");
 let current="home", stream=null, scanRAF=0, fileData=null, blocks=[], blockIndex=0, recv=null, scanEnableAt=0, scanning=false, lastSeenKey="", lastSeenAt=0, autoTimer=null, autoRunning=false, normalResultText="";
-let qrReader=null, trackROI=null;
+let qrReader=null, trackROI=null, lastScanMode="FULL";
 const ROI_MARGIN=0.50;
 let transferSource=null;
 const START=new Uint8Array([0xD3,0x51,0x52,0x43]), SHORT=new Uint8Array([0xD3,0x43]);
@@ -145,11 +145,13 @@ function scan(){
     ctx.drawImage(v,0,0,full.width,full.height);
     let code=null;
     if(trackROI){
+      lastScanMode="ROI";
       let rc=$("roiScanCanvas");if(!rc){rc=document.createElement("canvas");rc.id="roiScanCanvas"}
       rc.width=trackROI.w;rc.height=trackROI.h;rc.getContext("2d",{willReadFrequently:true}).drawImage(full,trackROI.x,trackROI.y,trackROI.w,trackROI.h,0,0,trackROI.w,trackROI.h);
       code=decodeCanvas(rc,trackROI.x,trackROI.y);
       if(code)trackROI=roiFromCode(code,full.width,full.height);else trackROI=null;
     }else{
+      lastScanMode="FULL";
       code=decodeCanvas(full);
       if(code)trackROI=roiFromCode(code,full.width,full.height);
     }
@@ -195,6 +197,13 @@ function handleDecoded(code){
     if(recv.version===VERSION3){if(b.length<4)return;no=(b[2]<<8)|b[3];p=4}
     else{if(b.length<3)return;no=b[2];p=3}
     if(no===recv.next){recv.parts.push(b.slice(p));recv.next++;updateRecv();if(no===recv.total)finishRecv();return}
+    $("recvStatus").textContent=`診断: ${lastScanMode} QR認識 / Block ${no}（期待 ${recv.next}）`;
+    return;
+  }
+  if(recv){
+    const hex=Array.from(b.slice(0,8),x=>x.toString(16).padStart(2,"0").toUpperCase()).join(" ");
+    $("recvStatus").textContent=`診断: ${lastScanMode} QR認識 / ${hex||"byteなし"} / ${b.length}B`;
+    return;
   }
   if(!recv){const key=(code.data||"")+"|"+b.length+"|"+Array.from(b.slice(0,12)).join(",");if(key===lastSeenKey&&now-lastSeenAt<350)return;lastSeenKey=key;lastSeenAt=now;const text=String(code.data||"");if(!text)return;captureRecognized(code);showNormal(text)}
 }
