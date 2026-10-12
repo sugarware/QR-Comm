@@ -155,4 +155,4 @@ if($("measureDisplay"))$("measureDisplay").onclick=measureDisplayPeriod;
 })();
 
 // v0.80 settings parameter help
-(()=>{const o=document.getElementById("openParamHelp"),c=document.getElementById("closeParamHelp"),p=document.getElementById("paramHelp");if(!o||!c||!p)return;o.addEventListener("click",()=>p.classList.remove("hidden"));c.addEventListener("click",()=>p.classList.add("hidden"));p.addEventListener("click",e=>{if(e.target===p)p.classList.add("hidden")});})();
+(()=>{const o=document.getElementById("openParamHelp"),c=document.getElementById("closeParamHelp"),p=document.getElementById("paramHelp");if(!o||!c||!p)return;document.body.appendChild(p);o.addEventListener("click",()=>p.classList.remove("hidden"));c.addEventListener("click",()=>p.classList.add("hidden"));p.addEventListener("click",e=>{if(e.target===p)p.classList.add("hidden")});})();
