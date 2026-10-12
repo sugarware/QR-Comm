@@ -1,6 +1,4 @@
-QR通信 v0.70: XGA相当（1024×768）優先とZXingは維持し、可変ROI追尾を廃止。受信デコード対象を常にカメラ中央の最大正方形（XGA時 768×768）へ固定。
-
-QR通信 v0.70 PWA
+QR通信 v0.62 PWA
 
 概要
 - 通常QRコードの表示・読み取り
@@ -111,12 +109,3 @@ v0.62
 - Start: Magic 4B + Version 1B + Type 1B + Total 2B + Block No 2B
 - Continuation: Short Magic 2B + Block No 2B
 - Version 01 / Version 02 Legacyの受信互換を維持
-
-
-v0.65
-- 受信デコーダをjsQRからZXing BrowserQRCodeReaderへ変更（QR専用）
-- Outカメラは1920x1080をideal指定
-- 初回/再探索時はカメラ全画素をデコード
-- QR検出後は検出領域+25%マージンのROIのみをデコード
-- ROIで検出できなかった場合、次フレームは全画面探索へ復帰
-- QR通信プロトコル、送信処理、Version 01/02/03受信互換は変更なし
