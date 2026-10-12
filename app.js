@@ -153,3 +153,6 @@ function startCameraPeriodMeasurement(v){const o=$("cameraDiag");if(!o||!v)retur
 function measureCameraByCurrentTime(v,finish){let changes=0,lastTime=v.currentTime;const start=performance.now();function poll(now){if(v.currentTime!==lastTime){lastTime=v.currentTime;changes++}if(now-start>=2500){finish(changes/((now-start)/1000));return}requestAnimationFrame(poll)}requestAnimationFrame(poll)}
 if($("measureDisplay"))$("measureDisplay").onclick=measureDisplayPeriod;
 })();
+
+// v0.80 settings parameter help
+(()=>{const o=document.getElementById("openParamHelp"),c=document.getElementById("closeParamHelp"),p=document.getElementById("paramHelp");if(!o||!c||!p)return;o.addEventListener("click",()=>p.classList.remove("hidden"));c.addEventListener("click",()=>p.classList.add("hidden"));p.addEventListener("click",e=>{if(e.target===p)p.classList.add("hidden")});})();

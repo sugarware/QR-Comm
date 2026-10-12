@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.79</title>
+<title>QR通信 v0.80</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -265,10 +265,25 @@ header #settingsHome{top:6px!important;transform:none!important;filter:none!impo
 #receive.receiveDone #result{max-height:42dvh;overflow:auto;-webkit-user-select:text;user-select:text}
 #receive.receiveDone .row:last-child{position:sticky;bottom:0;background:rgba(255,255,255,.96);padding:8px 0 calc(8px + env(safe-area-inset-bottom));margin-bottom:0;z-index:3}
 </style>
+
+<style>
+/* v0.80: iPhone standalone PWA対策。ヘッダーを通常フローの単純なGridにし、合成レイヤー要因を排除 */
+#appHeader{height:56px!important;display:grid!important;grid-template-columns:72px minmax(0,1fr) 72px!important;align-items:center!important;position:static!important;inset:auto!important;margin:0!important;padding:0!important;background:#fff!important;transform:none!important;filter:none!important;opacity:1!important;will-change:auto!important;contain:none!important;isolation:auto!important}
+#appHeader .headerSlot{height:56px;display:flex;align-items:center;position:static!important;transform:none!important;filter:none!important}
+#appHeader .headerLeft{justify-content:flex-start} #appHeader .headerRight{justify-content:flex-end}
+#appHeader #title{display:block!important;text-align:center!important;position:static!important;transform:none!important;filter:none!important;will-change:auto!important}
+#appHeader button,#appHeader #settingsHome{position:static!important;inset:auto!important;transform:none!important;filter:none!important;will-change:auto!important;margin:0 6px!important}
+#appHeader #settingsHome{width:48px!important;height:48px!important;min-height:48px!important;background:#edf6ff!important;border:1px solid #d3e9ff!important;border-radius:14px!important;color:#2f85ee!important}
+.settingsHelpTop{display:flex;justify-content:flex-end;margin:0 0 7px}.settingsHelpTop button{padding:8px 11px!important}
+.helpPanel{position:fixed;inset:0;z-index:3000;background:rgba(20,30,40,.32);padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));overflow:auto!important;-webkit-overflow-scrolling:touch;user-select:text;-webkit-user-select:text}
+.helpSheet{max-width:650px;margin:0 auto;background:#fff;border-radius:18px;padding:16px 16px 24px;box-shadow:0 10px 36px rgba(0,0,0,.18);line-height:1.55}
+.helpHead{display:flex;align-items:center;gap:10px;justify-content:space-between;position:sticky;top:0;background:#fff;padding:2px 0 8px;border-bottom:1px solid var(--line)}.helpHead h2{margin:0;font-size:20px}.helpHead button{flex:0 0 auto;padding:7px 11px!important}
+.helpSheet h3{font-size:17px;margin:18px 0 5px}.helpSheet p{margin:6px 0}.helpSheet ol{padding-left:1.5em}.helpSheet li{margin:5px 0}.helpBox{background:#eef7ff;border:1px solid #d5e8f7;border-radius:12px;padding:11px;margin:12px 0}
+</style>
 </head>
 <body>
-<div id="appVersionBadge" aria-label="バージョン">v0.79</div>
-<header><button id="back" class="hidden">＜ 戻る</button><span id="title">QR通信</span><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button></header>
+<div id="appVersionBadge" aria-label="バージョン">v0.80</div>
+<header id="appHeader"><div class="headerSlot headerLeft"><button id="back" class="hidden">＜ 戻る</button></div><span id="title">QR通信</span><div class="headerSlot headerRight"><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button></div></header>
 <main>
 <section id="home" class="page active home"><button class="big" data-go="send">送信 / 表示</button><button class="big" data-go="receive">受信 / 読込</button>
 <div class="homeUrlQR card">
@@ -306,6 +321,7 @@ header #settingsHome{top:6px!important;transform:none!important;filter:none!impo
 <div class="row"><button id="copy" class="hidden">コピー</button><button id="save" class="hidden">ファイル保存</button><button id="stop">閉じる</button></div>
 </section>
 <section id="settings" class="page">
+<div class="settingsHelpTop"><button id="openParamHelp" type="button">？ パラメータ選択の手引き</button></div>
 <div class="parameterGroup">
   <h3>送信パラメータ</h3>
   <div class="card"><label>ブロックサイズ　<select id="block"><option>64</option><option>128</option><option>256</option><option selected>512</option><option>768</option><option>1024</option></select> B</label></div>
@@ -319,9 +335,30 @@ header #settingsHome{top:6px!important;transform:none!important;filter:none!impo
 </div>
 <div class="card"><b>プロトコル</b><p class="muted">Version 03: Start Magic 4B / Version 1B / Type 1B / Total 2B / Block 2B<br>継続: Short Magic 2B / Block 2B。Version 01 / 02（従来Legacy）受信互換。</p></div>
 <div class="settingsGroup"><h3>診断</h3><div id="diagBox"><div>画面更新: <span id="displayDiag">未測定</span></div><div>カメラ: <span id="cameraDiag">受信画面で測定</span></div></div><button id="measureDisplay" type="button">画面周期を測定</button><div class="muted">ブラウザから見た実効周期です。</div></div>
+
+<div id="paramHelp" class="helpPanel hidden" role="dialog" aria-modal="true" aria-labelledby="paramHelpTitle">
+  <div class="helpSheet">
+    <div class="helpHead"><h2 id="paramHelpTitle">送受信パラメータの選び方</h2><button id="closeParamHelp" type="button">閉じる</button></div>
+    <p><b>基本は「速さ」と「読み取りやすさ」の綱引きです。</b> QRを速く切り替えたり、一つのQRに多くのデータを詰め込むほど通信は速くできます。しかしQRが細かくなったり、カメラが1枚を読み取れる時間が短くなり、手持ち撮影では失敗しやすくなります。</p>
+    <div class="helpBox"><b>まず迷ったら</b><br>ブロックサイズ <b>512 B</b> ／ 自動送信間隔 <b>0.15秒</b> ／ 誤り訂正 <b>M</b> ／ カメラ <b>XGA</b> ／ <b>60 fps</b> から試してください。安定して読めるなら、間隔を短くしたりブロックを大きくして高速化します。</div>
+    <h3>ブロックサイズ</h3>
+    <p>1枚のQRに入れるデータ量です。<b>大きいほど1回で多く送れて高速</b>ですが、QRのマス目が細かくなり、距離・ピント・手ブレの影響を受けやすくなります。64～256 Bは読み取りやすさ優先、512 Bは標準、768～1024 Bは速度優先です。</p>
+    <h3>自動送信間隔</h3>
+    <p>次のQRへ切り替えるまでの時間です。<b>短いほど高速</b>ですが、受信カメラがそのQRを撮影・認識する前に次へ進む可能性が高くなります。0.05～0.10秒は高速側、0.15秒は標準、0.20～0.30秒は安定側です。読み飛ばしが起きる場合は、まずここを長くしてください。</p>
+    <h3>誤り訂正 L / M / Q / H</h3>
+    <p>QRの一部がうまく写らなくても復元しやすくする仕組みです。L→M→Q→Hの順に復元力は上がります。ただし訂正情報が増えるため、同じデータでもQRが高密度になります。<b>通常はM</b>、汚れや欠けへの耐性を上げたい場合はQ/H、十分きれいに撮れる場合はLが候補です。高くすれば必ず読みやすくなるわけではありません。</p>
+    <h3>カメラ解像度</h3>
+    <p>XGAは細かなQRを見分けやすく、特に大きなブロックサイズで有利です。一方、VGAは処理する画素数が少ないため端末の負荷を軽くできます。<b>高密度QRではXGAを優先</b>し、端末が重い場合はVGAを試してください。</p>
+    <h3>フレームレート</h3>
+    <p>1秒間にカメラが取り込む画像枚数です。60 fpsなら短い間隔で切り替わるQRを捉える機会が増えます。30 fpsは撮影機会が少なくなるため、高速送信では不利です。ただし指定値は要求値で、端末やブラウザによって実際のfpsは低くなることがあります。設定画面の診断で実効値を確認できます。</p>
+    <h3>安定しないときの調整順</h3>
+    <ol><li>自動送信間隔を長くする</li><li>ブロックサイズを小さくする</li><li>QRが画面内で十分大きく、正面に近く、反射しないよう端末位置を整える</li><li>XGA・60 fpsを試す</li><li>誤り訂正はMを基準に、撮影条件に応じて調整する</li></ol>
+    <p class="muted">最適値は送信画面の更新速度、受信カメラの実効fps、ピント、明るさ、端末間距離、手ブレなどで変わります。最高速度より、連続して読み飛ばさない設定の方が実際の転送は速くなることがあります。</p>
+  </div>
+</div>
 </section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="app.js?v=079"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="app.js?v=080"></script>
 </body></html><style>
 #home{position:relative}
 #settingsHome{position:absolute!important;right:12px!important;top:12px!important;width:48px!important;height:48px!important;min-height:48px!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:28px!important;line-height:1!important;z-index:2}
