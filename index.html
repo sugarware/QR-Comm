@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.78</title>
+<title>QR通信 v0.79</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -98,9 +98,7 @@ body{
   min-height:100vh;
 }
 header{
-  background:rgba(255,255,255,.88) !important;
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
+  background:#fff !important;
 }
 .page{
   background:rgba(255,255,255,.90) !important;
@@ -233,12 +231,12 @@ header #settingsHome{
 </style>
 
 <style>
-/* v0.78: fixed-screen UI / displayed-text selection disabled */
+/* v0.79: fixed-screen UI / displayed-text selection disabled */
 html,body{height:100%;height:100dvh;overflow:hidden!important;-webkit-user-select:none;user-select:none}
 body{padding-bottom:0!important}
 main{height:calc(100dvh - 56px);overflow:hidden}
 .page{height:100%;max-height:100%;overflow:hidden!important}
-/* v0.78: 設定画面だけ縦スクロールを許可 */
+/* v0.79: 設定画面だけ縦スクロールを許可 */
 #settings.page{overflow-y:auto!important;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding-bottom:calc(28px + env(safe-area-inset-bottom))!important}
 textarea,input,select{ -webkit-user-select:text;user-select:text }
 #settings{padding-top:10px!important;padding-bottom:10px!important}
@@ -252,13 +250,14 @@ textarea,input,select{ -webkit-user-select:text;user-select:text }
 #settings #measureDisplay{padding:7px 10px;margin-top:5px}
 </style>
 <style>
-/* v0.78: iOS/PWAで上部ヘッダーがぼけるのを避ける */
-header{background:#fff!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:none!important;filter:none!important}
-header #title,header button{-webkit-font-smoothing:antialiased;filter:none!important}
+/* v0.79: iOS/PWA ヘッダー鮮明化。backdrop-filter/合成レイヤーを完全に使わない */
+header{background:#fff!important;transform:none!important;filter:none!important;opacity:1!important}
+header #title{display:block;transform:none!important;filter:none!important;opacity:1!important}
+header #settingsHome{top:6px!important;transform:none!important;filter:none!important;opacity:1!important}
 </style>
 
 <style>
-/* v0.78: 受信完了後はカメラ領域を畳み、結果と操作ボタンを画面内に表示 */
+/* v0.79: 受信完了後はカメラ領域を畳み、結果と操作ボタンを画面内に表示 */
 #receive.receiveDone #cameraFrame,
 #receive.receiveDone #startRead,
 #receive.receiveDone .progress{display:none!important}
@@ -268,7 +267,7 @@ header #title,header button{-webkit-font-smoothing:antialiased;filter:none!impor
 </style>
 </head>
 <body>
-<div id="appVersionBadge" aria-label="バージョン">v0.78</div>
+<div id="appVersionBadge" aria-label="バージョン">v0.79</div>
 <header><button id="back" class="hidden">＜ 戻る</button><span id="title">QR通信</span><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button></header>
 <main>
 <section id="home" class="page active home"><button class="big" data-go="send">送信 / 表示</button><button class="big" data-go="receive">受信 / 読込</button>
@@ -322,7 +321,7 @@ header #title,header button{-webkit-font-smoothing:antialiased;filter:none!impor
 <div class="settingsGroup"><h3>診断</h3><div id="diagBox"><div>画面更新: <span id="displayDiag">未測定</span></div><div>カメラ: <span id="cameraDiag">受信画面で測定</span></div></div><button id="measureDisplay" type="button">画面周期を測定</button><div class="muted">ブラウザから見た実効周期です。</div></div>
 </section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="app.js?v=078"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="app.js?v=079"></script>
 </body></html><style>
 #home{position:relative}
 #settingsHome{position:absolute!important;right:12px!important;top:12px!important;width:48px!important;height:48px!important;min-height:48px!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:28px!important;line-height:1!important;z-index:2}
