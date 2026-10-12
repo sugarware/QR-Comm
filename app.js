@@ -17,7 +17,6 @@ document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go)
 back.onclick=()=>go("home");$("end").onclick=()=>go("home");$("stop").onclick=()=>go("home");
 
 function resetReceiveState(){
-  $("receive").classList.remove("receiveDone");
   recv=null;
   scanning=false; lastSeenKey=""; lastSeenAt=0; scanEnableAt=0;
   $("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="コードを認識枠内に合わせてください";
@@ -31,7 +30,7 @@ function senderStatus(){if(!blocks.length)return;$("sendStatus").innerHTML='<div
 function receiverStatus(done,total){const el=$("receiveBlockStatus");if(!el)return;el.classList.remove("hidden");el.innerHTML='<span class="label">受信済み</span><span class="current">'+done+'</span><span class="total">/ '+total+'</span>';}
 
 function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null}autoRunning=false;const b=$("autoToggle");if(b){b.textContent="▶ 一定間隔自動";b.disabled=!blocks.length}}
-function startAuto(){if(!blocks.length||autoRunning)return;autoRunning=true;const b=$("autoToggle");if(b)b.textContent="⏸ 停止";const intervalMs=parseInt(($("autoInterval")&&$("autoInterval").value)||localStorage.autoInterval||"150",10);autoTimer=setInterval(()=>{if(blockIndex>=blocks.length-1){stopAuto();return}blockIndex++;renderBlock();},intervalMs)}
+function startAuto(){if(!blocks.length||autoRunning)return;autoRunning=true;const b=$("autoToggle");if(b)b.textContent="⏸ 停止";const intervalMs=parseInt(($("autoInterval")&&$("autoInterval").value)||localStorage.autoInterval||"80",10);autoTimer=setInterval(()=>{if(blockIndex>=blocks.length-1){stopAuto();return}blockIndex++;renderBlock();},intervalMs)}
 function toggleAuto(){autoRunning?stopAuto():startAuto()}
 
 $("fileBtn").onclick=()=>$("file").click();
@@ -91,7 +90,7 @@ async function startCamera(facing="environment"){
 }
 async function openReceiveCamera(facing){
   const v=$("video");try{v.pause()}catch(e){}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}v.srcObject=null;
-  const res=($("cameraResolution")&&$("cameraResolution").value)||localStorage.cameraResolution||"xga",fps=parseInt((($("cameraFrameRate")&&$("cameraFrameRate").value)||localStorage.cameraFrameRate||"60"),10),w=res==="vga"?640:1024,h=res==="vga"?480:768;
+  const res=($("cameraResolution")&&$("cameraResolution").value)||localStorage.cameraResolution||"vga",fps=parseInt((($("cameraFrameRate")&&$("cameraFrameRate").value)||localStorage.cameraFrameRate||"60"),10),w=res==="vga"?640:1024,h=res==="vga"?480:768;
   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:w},height:{ideal:h},frameRate:{ideal:fps}},audio:false});v.srcObject=stream;await v.play();startCameraPeriodMeasurement(v);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 }
 
@@ -137,22 +136,19 @@ function handleDecoded(code){
 function updateRecv(){const done=recv.parts.length;receiverStatus(done,recv.total);$("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="そのままQRコードにカメラを向けてください";$("bar").style.width=(done/recv.total*100)+"%"}
 
 async function copyTextReliable(text){const value=String(text??"");if(!value)return false;try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(value);return true}}catch(_e){}try{const ta=document.createElement("textarea");ta.value=value;ta.setAttribute("readonly","");ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.focus();ta.select();const ok=document.execCommand("copy");document.body.removeChild(ta);return!!ok}catch(_e){return false}}
-function showNormal(t){$("receive").classList.add("receiveDone");normalResultText=String(t??"");stopCamera();$("recvStatus").classList.remove("receiveGuide");$("recvStatus").classList.add("singleQRDone");$("recvStatus").textContent="✓ QRコード 読み取り完了";$("result").classList.remove("hidden");$("result").textContent=normalResultText;$("copy").classList.remove("hidden");$("save").classList.remove("hidden");$("copy").onclick=async()=>{const ok=await copyTextReliable(normalResultText);$("recvStatus").classList.remove("singleQRDone");$("recvStatus").textContent=ok?"✓ QRコード 読み取り完了・コピーしました":"✓ QRコード 読み取り完了（コピーに失敗）"};$("save").onclick=()=>download(new TextEncoder().encode(normalResultText),"qr.txt","text/plain")}
-function finishRecv(){stopCamera();$("receive").classList.add("receiveDone");const data=concat(...recv.parts);$("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="✓ 受信完了";$("result").classList.remove("hidden");if(recv.type===1){const t=new TextDecoder().decode(data);$("result").textContent=t;$("copy").classList.remove("hidden");$("copy").onclick=()=>navigator.clipboard.writeText(t);$("save").classList.remove("hidden");$("save").onclick=()=>download(data,"qr通信.txt","text/plain")}else{$("result").textContent=`📄 ${recv.name||"受信ファイル"}  ${data.length.toLocaleString()} bytes`;$("save").classList.remove("hidden");$("save").onclick=()=>download(data,recv.name||"received.bin",mimeFromName(recv.name))}}
+function showNormal(t){normalResultText=String(t??"");stopCamera();$("recvStatus").classList.remove("receiveGuide");$("recvStatus").classList.add("singleQRDone");$("recvStatus").textContent="✓ QRコード 読み取り完了";$("result").classList.remove("hidden");$("result").textContent=normalResultText;$("copy").classList.remove("hidden");$("save").classList.remove("hidden");$("copy").onclick=async()=>{const ok=await copyTextReliable(normalResultText);$("recvStatus").classList.remove("singleQRDone");$("recvStatus").textContent=ok?"✓ QRコード 読み取り完了・コピーしました":"✓ QRコード 読み取り完了（コピーに失敗）"};$("save").onclick=()=>download(new TextEncoder().encode(normalResultText),"qr.txt","text/plain")}
+function finishRecv(){stopCamera();const data=concat(...recv.parts);$("recvStatus").classList.remove("receiveGuide","singleQRDone");$("recvStatus").textContent="✓ 受信完了";$("result").classList.remove("hidden");if(recv.type===1){const t=new TextDecoder().decode(data);$("result").textContent=t;$("copy").classList.remove("hidden");$("copy").onclick=()=>navigator.clipboard.writeText(t);$("save").classList.remove("hidden");$("save").onclick=()=>download(data,"qr通信.txt","text/plain")}else{$("result").textContent=`📄 ${recv.name||"受信ファイル"}  ${data.length.toLocaleString()} bytes`;$("save").classList.remove("hidden");$("save").onclick=()=>download(data,recv.name||"received.bin",mimeFromName(recv.name))}}
 function mimeFromName(name=""){const n=name.toLowerCase();if(n.endsWith(".jpg")||n.endsWith(".jpeg"))return"image/jpeg";if(n.endsWith(".png"))return"image/png";if(n.endsWith(".txt"))return"text/plain";return"application/octet-stream"}
 function download(bytes,name,type){const u=URL.createObjectURL(new Blob([bytes],{type})),a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 
-$("block").value=localStorage.block||"512";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
-if($("cameraResolution")){$("cameraResolution").value=localStorage.cameraResolution||"xga";$("cameraResolution").onchange=e=>localStorage.cameraResolution=e.target.value}if($("cameraFrameRate")){$("cameraFrameRate").value=localStorage.cameraFrameRate||"60";$("cameraFrameRate").onchange=e=>localStorage.cameraFrameRate=e.target.value}
+$("block").value=localStorage.block||"768";$("ecc").value=localStorage.ecc||"M";$("block").onchange=e=>localStorage.block=e.target.value;$("ecc").onchange=e=>localStorage.ecc=e.target.value;
+if($("cameraResolution")){$("cameraResolution").value=localStorage.cameraResolution||"vga";$("cameraResolution").onchange=e=>localStorage.cameraResolution=e.target.value}if($("cameraFrameRate")){$("cameraFrameRate").value=localStorage.cameraFrameRate||"60";$("cameraFrameRate").onchange=e=>localStorage.cameraFrameRate=e.target.value}
 drawHomeQR();
-if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=076").catch(console.error));
-if($("autoInterval")){$("autoInterval").value=localStorage.autoInterval||"150";$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value}};
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js?v=074").catch(console.error));
+if($("autoInterval")){$("autoInterval").value=localStorage.autoInterval||"80";$("autoInterval").onchange=()=>{localStorage.autoInterval=$("autoInterval").value}};
 
 function measureDisplayPeriod(){const o=$("displayDiag");if(!o)return;o.textContent="測定中…";let a=[],last=performance.now(),start=last;function f(now){const d=now-last;last=now;if(d>0&&d<100)a.push(d);if(now-start<1800)return requestAnimationFrame(f);if(a.length){a.sort((x,y)=>x-y);const d=a[Math.floor(a.length/2)];o.textContent=`${(1000/d).toFixed(1)} Hz / ${d.toFixed(1)} ms`}}requestAnimationFrame(f)}
 function startCameraPeriodMeasurement(v){const o=$("cameraDiag");if(!o||!v)return;o.textContent="測定中…";let finished=false;const finish=fps=>{if(finished)return;finished=true;if(Number.isFinite(fps)&&fps>1){const ms=1000/fps;o.textContent=`${fps.toFixed(1)} fps / ${ms.toFixed(1)} ms`}else o.textContent="測定できません"};if(typeof v.requestVideoFrameCallback==="function"){let count=0,first=null,last=null;const cb=now=>{if(finished)return;if(first===null)first=now;last=now;count++;if(now-first>=2200){const elapsed=(last-first)/1000;finish(elapsed>0?(count-1)/elapsed:NaN);return}v.requestVideoFrameCallback(cb)};v.requestVideoFrameCallback(cb);setTimeout(()=>{if(!finished&&count<3)measureCameraByCurrentTime(v,finish)},2600);return}measureCameraByCurrentTime(v,finish)}
 function measureCameraByCurrentTime(v,finish){let changes=0,lastTime=v.currentTime;const start=performance.now();function poll(now){if(v.currentTime!==lastTime){lastTime=v.currentTime;changes++}if(now-start>=2500){finish(changes/((now-start)/1000));return}requestAnimationFrame(poll)}requestAnimationFrame(poll)}
 if($("measureDisplay"))$("measureDisplay").onclick=measureDisplayPeriod;
 })();
-
-// v0.80 settings parameter help
-(()=>{const o=document.getElementById("openParamHelp"),c=document.getElementById("closeParamHelp"),p=document.getElementById("paramHelp");if(!o||!c||!p)return;o.addEventListener("click",()=>p.classList.remove("hidden"));c.addEventListener("click",()=>p.classList.add("hidden"));p.addEventListener("click",e=>{if(e.target===p)p.classList.add("hidden")});})();
