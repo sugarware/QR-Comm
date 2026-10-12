@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.82</title>
+<title>QR通信 v0.83</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -279,14 +279,16 @@ header #settingsHome{top:6px!important;transform:none!important;filter:none!impo
 #appHeader #back{width:auto!important;min-width:68px!important;max-width:none!important;flex:0 0 auto!important;white-space:nowrap!important;padding:9px 10px!important;font-size:16px!important;line-height:1.2!important}
 .settingsHelpTop{display:flex;justify-content:flex-end;margin:0 0 7px}.settingsHelpTop button{padding:8px 11px!important}
 body:has(#paramHelp:not(.hidden)) #appHeader{visibility:hidden!important;pointer-events:none!important}
-.helpPanel{position:fixed;inset:0;z-index:3000;background:rgba(20,30,40,.32);padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));overflow:auto!important;-webkit-overflow-scrolling:touch;user-select:text;-webkit-user-select:text}
-.helpSheet{max-width:650px;margin:0 auto;background:#fff;border-radius:18px;padding:16px 16px 24px;box-shadow:0 10px 36px rgba(0,0,0,.18);line-height:1.55}
-.helpHead{display:flex;align-items:center;gap:10px;justify-content:space-between;position:sticky;top:0;z-index:2;background:#fff;padding:2px 0 8px;border-bottom:1px solid var(--line)}.helpHead h2{margin:0;font-size:20px}.helpHead button{flex:0 0 auto;padding:7px 11px!important}
+/* v0.83: Helpの閉じるボタンをスクロール領域の外に置き、iPhoneでも常時表示 */
+.helpPanel{position:fixed;inset:0;z-index:3000;background:rgba(20,30,40,.32);padding:calc(8px + env(safe-area-inset-top)) 12px calc(8px + env(safe-area-inset-bottom));overflow:hidden!important;user-select:text;-webkit-user-select:text}
+.helpSheet{max-width:650px;height:100%;margin:0 auto;background:#fff;border-radius:18px;box-shadow:0 10px 36px rgba(0,0,0,.18);line-height:1.55;display:flex;flex-direction:column;overflow:hidden}
+.helpHead{display:flex;align-items:center;gap:10px;justify-content:space-between;flex:0 0 auto;background:#fff;padding:12px 16px 10px;border-bottom:1px solid var(--line);z-index:2}.helpHead h2{margin:0;font-size:20px}.helpHead button{flex:0 0 auto;padding:7px 11px!important}
+.helpBody{flex:1 1 auto;min-height:0;overflow-y:auto!important;-webkit-overflow-scrolling:touch;padding:0 16px 24px}
 .helpSheet h3{font-size:17px;margin:18px 0 5px}.helpSheet p{margin:6px 0}.helpSheet ol{padding-left:1.5em}.helpSheet li{margin:5px 0}.helpBox{background:#eef7ff;border:1px solid #d5e8f7;border-radius:12px;padding:11px;margin:12px 0}
 </style>
 </head>
 <body>
-<div id="appVersionBadge" aria-label="バージョン">v0.82</div>
+<div id="appVersionBadge" aria-label="バージョン">v0.83</div>
 <header id="appHeader"><div class="headerSlot headerLeft"><button id="back" class="hidden">＜ 戻る</button></div><span id="title">QR通信</span><div class="headerSlot headerRight"><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button></div></header>
 <main>
 <section id="home" class="page active home"><button class="big" data-go="send">送信 / 表示</button><button class="big" data-go="receive">受信 / 読込</button>
@@ -343,6 +345,7 @@ body:has(#paramHelp:not(.hidden)) #appHeader{visibility:hidden!important;pointer
 <div id="paramHelp" class="helpPanel hidden" role="dialog" aria-modal="true" aria-labelledby="paramHelpTitle">
   <div class="helpSheet">
     <div class="helpHead"><h2 id="paramHelpTitle">送受信パラメータの選び方</h2><button id="closeParamHelp" type="button">閉じる</button></div>
+    <div class="helpBody">
     <p><b>基本は「速さ」と「読み取りやすさ」の綱引きです。</b> QRを速く切り替えたり、一つのQRに多くのデータを詰め込むほど通信は速くできます。しかしQRが細かくなったり、カメラが1枚を読み取れる時間が短くなり、手持ち撮影では失敗しやすくなります。</p>
     <div class="helpBox"><b>まず迷ったら</b><br>ブロックサイズ <b>512 B</b> ／ 自動送信間隔 <b>0.15秒</b> ／ 誤り訂正 <b>M</b> ／ カメラ <b>XGA</b> ／ <b>60 fps</b> から試してください。安定して読めるなら、間隔を短くしたりブロックを大きくして高速化します。</div>
     <h3>ブロックサイズ</h3>
@@ -358,6 +361,7 @@ body:has(#paramHelp:not(.hidden)) #appHeader{visibility:hidden!important;pointer
     <h3>安定しないときの調整順</h3>
     <ol><li>自動送信間隔を長くする</li><li>ブロックサイズを小さくする</li><li>QRが画面内で十分大きく、正面に近く、反射しないよう端末位置を整える</li><li>XGA・60 fpsを試す</li><li>誤り訂正はMを基準に、撮影条件に応じて調整する</li></ol>
     <p class="muted">最適値は送信画面の更新速度、受信カメラの実効fps、ピント、明るさ、端末間距離、手ブレなどで変わります。最高速度より、連続して読み飛ばさない設定の方が実際の転送は速くなることがあります。</p>
+    </div>
   </div>
 </div>
 </section>
