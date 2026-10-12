@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.81</title>
+<title>QR通信 v0.82</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -275,16 +275,18 @@ header #settingsHome{top:6px!important;transform:none!important;filter:none!impo
 #appHeader button,#appHeader #settingsHome{position:static!important;inset:auto!important;transform:none!important;filter:none!important;will-change:auto!important;margin:0 6px!important}
 #appHeader #settingsHome{width:48px!important;height:48px!important;min-height:48px!important;background:#edf6ff!important;border:1px solid #d3e9ff!important;border-radius:14px!important;color:#2f85ee!important}
 /* v0.81: 戻るボタンのみ表示崩れ修正 */
+/* v0.82: Help表示中はアプリヘッダーを隠し、Help内の閉じる操作を常時表示 */
 #appHeader #back{width:auto!important;min-width:68px!important;max-width:none!important;flex:0 0 auto!important;white-space:nowrap!important;padding:9px 10px!important;font-size:16px!important;line-height:1.2!important}
 .settingsHelpTop{display:flex;justify-content:flex-end;margin:0 0 7px}.settingsHelpTop button{padding:8px 11px!important}
+body:has(#paramHelp:not(.hidden)) #appHeader{visibility:hidden!important;pointer-events:none!important}
 .helpPanel{position:fixed;inset:0;z-index:3000;background:rgba(20,30,40,.32);padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));overflow:auto!important;-webkit-overflow-scrolling:touch;user-select:text;-webkit-user-select:text}
 .helpSheet{max-width:650px;margin:0 auto;background:#fff;border-radius:18px;padding:16px 16px 24px;box-shadow:0 10px 36px rgba(0,0,0,.18);line-height:1.55}
-.helpHead{display:flex;align-items:center;gap:10px;justify-content:space-between;position:sticky;top:0;background:#fff;padding:2px 0 8px;border-bottom:1px solid var(--line)}.helpHead h2{margin:0;font-size:20px}.helpHead button{flex:0 0 auto;padding:7px 11px!important}
+.helpHead{display:flex;align-items:center;gap:10px;justify-content:space-between;position:sticky;top:0;z-index:2;background:#fff;padding:2px 0 8px;border-bottom:1px solid var(--line)}.helpHead h2{margin:0;font-size:20px}.helpHead button{flex:0 0 auto;padding:7px 11px!important}
 .helpSheet h3{font-size:17px;margin:18px 0 5px}.helpSheet p{margin:6px 0}.helpSheet ol{padding-left:1.5em}.helpSheet li{margin:5px 0}.helpBox{background:#eef7ff;border:1px solid #d5e8f7;border-radius:12px;padding:11px;margin:12px 0}
 </style>
 </head>
 <body>
-<div id="appVersionBadge" aria-label="バージョン">v0.81</div>
+<div id="appVersionBadge" aria-label="バージョン">v0.82</div>
 <header id="appHeader"><div class="headerSlot headerLeft"><button id="back" class="hidden">＜ 戻る</button></div><span id="title">QR通信</span><div class="headerSlot headerRight"><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button></div></header>
 <main>
 <section id="home" class="page active home"><button class="big" data-go="send">送信 / 表示</button><button class="big" data-go="receive">受信 / 読込</button>
