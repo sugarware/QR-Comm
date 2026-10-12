@@ -2,7 +2,7 @@
 <html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#f5f5f7"><link rel="manifest" href="manifest.json">
-<title>QR通信 v0.52</title>
+<title>QR通信 v0.4</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f5f5f7;color:#111}
 header{height:56px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px;background:#fff;border-bottom:1px solid #ddd;position:relative}
@@ -35,7 +35,6 @@ select,input[type=number]{font:inherit;padding:10px;border-radius:10px;border:1p
 #cameraFrame video{
   width:100%;
   height:100%;
-  max-height:none;
   object-fit:cover;
   display:block;
 }
@@ -57,8 +56,6 @@ h1{font-size:30px;margin:20px 0 16px} h2{font-size:21px}
 button{border-radius:14px;font-weight:700}
 #home button{min-height:70px;font-size:24px}
 #sendStatus,#recvStatus{font-size:30px;font-weight:800;margin:4px 0 10px}
-#recvStatus.receiveGuide{font-size:20px;line-height:1.25}
-#recvStatus.singleQRDone{font-size:18px;line-height:1.2;white-space:nowrap}
 #qrCanvas{display:block;width:min(92vw,560px)!important;height:auto!important;margin:0 auto;background:#fff;border-radius:12px}
 #autoToggle{background:var(--accent);color:#fff;border:none;min-height:76px;font-size:26px}
 .manualControls button{min-width:78px}
@@ -82,161 +79,13 @@ button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 #receiveBlockStatus{margin-top:10px}
 </style>
 
-<style>
-#cameraFrame{width:100%!important;max-width:560px!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important}
-#qrCanvas{width:100%!important;max-width:560px!important;height:auto!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important}
-#homeHeader{position:relative;min-height:82px;display:flex;align-items:center;justify-content:center;background:#fff;border-bottom:1px solid #dfe5ec}
-#homeHeader h1{margin:0;text-align:center}
-#settingsHome{position:absolute!important;right:10px!important;top:50%!important;transform:translateY(-50%)!important;width:52px!important;height:52px!important;min-height:52px!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:30px!important;line-height:1!important}
-</style>
-<style>
-/* v0.42 visual finish */
-html,body{
-  background:linear-gradient(180deg,#eef7ff 0%,#f7fbff 48%,#f2f6fa 100%) !important;
-}
-body{
-  min-height:100vh;
-}
-header{
-  background:rgba(255,255,255,.88) !important;
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-}
-.page{
-  background:rgba(255,255,255,.90) !important;
-  border-color:#d7e6f3 !important;
-  box-shadow:0 8px 24px rgba(46,92,135,.08) !important;
-}
-#home{
-  background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(238,248,255,.96)) !important;
-}
-#home button.big[data-go="send"]{
-  background:linear-gradient(180deg,#55adff,#2f85ee) !important;
-  color:white !important;
-  border:none !important;
-  box-shadow:0 8px 18px rgba(47,133,238,.22) !important;
-}
-#home button.big[data-go="receive"]{
-  background:linear-gradient(180deg,#55d89d,#28b978) !important;
-  color:white !important;
-  border:none !important;
-  box-shadow:0 8px 18px rgba(40,185,120,.20) !important;
-}
-#settingsHome{
-  color:#2f85ee !important;
-  background:#edf6ff !important;
-  border:1px solid #d3e9ff !important;
-  border-radius:14px !important;
-}
-#autoToggle{
-  background:linear-gradient(180deg,#4da4ff,#2f85ee) !important;
-}
-.manualControls button{
-  background:#eef6ff !important;
-  border-color:#cfe5fa !important;
-}
-#cameraGuide{
-  border-color:rgba(255,255,255,.95) !important;
-  box-shadow:0 0 0 1px rgba(31,118,202,.20) inset;
-}
-#diagBox{
-  background:#eef7ff !important;
-  border-color:#d5e8f7 !important;
-}
-select,input,textarea{
-  background:#fbfdff !important;
-  border-color:#d5e5f1 !important;
-}
-</style>
-<link rel="apple-touch-icon" href="icon-192.png">
-
-<style>
-/* v0.43 secondary-screen color treatment */
-header #settingsHome{
-  left:auto !important;
-  right:10px !important;
-  top:50% !important;
-  transform:translateY(-50%) !important;
-  width:44px !important;
-  height:44px !important;
-  min-height:44px !important;
-  padding:0 !important;
-  border:0 !important;
-  border-radius:13px !important;
-  background:#edf6ff !important;
-  color:#2f85ee !important;
-  font-size:27px !important;
-  line-height:1 !important;
-  box-shadow:none !important;
-}
-#send .row button,
-#receive .row button,
-#settings button{
-  background:#eef7ff !important;
-  border-color:#cfe4f5 !important;
-  color:#205f99 !important;
-}
-#send #commQR{
-  background:#dceeff !important;
-  border-color:#acd3f6 !important;
-  color:#135f9f !important;
-}
-#send #fileBtn{
-  background:#edf8f3 !important;
-  border-color:#ccebdd !important;
-  color:#237554 !important;
-}
-#show .manualControls button{
-  background:#eef7ff !important;
-  border-color:#cfe4f5 !important;
-  color:#205f99 !important;
-}
-#show .endButton{
-  background:#fff1f1 !important;
-  border-color:#efcece !important;
-  color:#aa3d3d !important;
-}
-#receive #copy,#receive #save{
-  background:#edf8f3 !important;
-  border-color:#ccebdd !important;
-  color:#237554 !important;
-}
-#receive #stop{
-  background:#eef7ff !important;
-  border-color:#cfe4f5 !important;
-  color:#205f99 !important;
-}
-#settings .card{
-  background:#f7fbff !important;
-  border:1px solid #deecf7 !important;
-}
-#settings select{
-  background:#ffffff !important;
-}
-</style>
-<style>
-/* v0.45 home URL QR / captured-code preview */
-.home{padding-top:7vh}
-.homeUrlQR{margin:28px auto 0;padding:14px;max-width:300px;text-align:center;background:rgba(255,255,255,.74)!important}
-#homeQR{display:block;width:min(52vw,220px);height:auto;margin:0 auto;background:#fff;border-radius:10px}
-.homeUrlText{font-size:12px;margin-top:8px;word-break:break-all}
-#capturedCanvas{width:100%;height:100%;object-fit:contain;background:#fff;display:block}
-#capturedCanvas.hidden{display:none!important}
-</style>
-<style>
-#appVersionBadge{position:fixed;right:8px;bottom:calc(4px + env(safe-area-inset-bottom));z-index:1000;font-size:11px;font-weight:700;color:#667085;background:rgba(255,255,255,.88);border:1px solid #dfe5ec;border-radius:8px;padding:3px 7px;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-</style>
 </head>
 <body>
-<div id="appVersionBadge" aria-label="バージョン">v0.52</div>
-<header><button id="back" class="hidden">＜ 戻る</button><span id="title">QR通信 v0.52</span><button id="settingsHome" data-go="settings" aria-label="設定" title="設定">⚙︎</button></header>
+<header><button id="back" class="hidden">＜ 戻る</button><span id="title">QR通信</span></header>
 <main>
-<section id="home" class="page active home"><button class="big" data-go="send">送信 / 表示</button><button class="big" data-go="receive">受信 / 読込</button>
-<div class="homeUrlQR card">
-  <canvas id="homeQR" width="360" height="360" aria-label="QR通信アプリURLのQRコード"></canvas>
-  <div class="muted homeUrlText">https://sugarware.github.io/QR-Comm/</div>
-</div>
-
+<section id="home" class="page active home">
+<button class="big" data-go="send">送る</button><button class="big" data-go="receive">受ける</button>
+<button style="float:right" data-go="settings">⚙︎ 設定</button>
 </section>
 <section id="send" class="page">
 <textarea id="text" placeholder="ここに文章を入力 または貼り付け"></textarea>
@@ -256,12 +105,12 @@ header #settingsHome{
   <button id="prev">←</button>
   <button id="next">→</button>
 </div>
-<div class="row"><button id="copyQR" class="endButton hidden">コピー</button><button id="end" class="endButton">終了</button></div>
-<div id="showHelp" class="muted">自動送信間隔とPayloadサイズは設定で変更できます。読み損なった場合は停止し、−10 / ← で戻して再開できます。</div>
+<button id="end" class="endButton">終了</button>
+<div class="muted">自動送信間隔とPayloadサイズは設定で変更できます。読み損なった場合は停止し、−10 / ← で戻して再開できます。</div>
 </section>
 <section id="receive" class="page">
-<div id="cameraFrame"><video id="video" playsinline></video><canvas id="capturedCanvas" class="hidden"></canvas><div id="cameraGuide"></div></div><canvas id="scanCanvas" hidden></canvas>
-<div id="receiveBlockStatus" class="blockStatus hidden"></div><div id="recvStatus" class="status">コードを認識枠内に合わせてください</div><div class="row"><button id="startRead" class="primary">読取開始</button></div>
+<div id="cameraFrame"><video id="video" playsinline></video><div id="cameraGuide"></div></div><canvas id="scanCanvas" hidden></canvas>
+<div id="receiveBlockStatus" class="blockStatus hidden"></div><div id="recvStatus" class="status">QRコードを映してください</div>
 <div class="progress"><div id="bar"></div></div>
 <div id="result" class="card hidden"></div>
 <div class="row"><button id="copy" class="hidden">コピー</button><button id="save" class="hidden">ファイル保存</button><button id="stop">閉じる</button></div>
@@ -297,8 +146,5 @@ header #settingsHome{
 <div class="card"><b>プロトコル</b><p class="muted">Start Magic 4B / Version 1B / Type 1B / Total 1B / Block 1B<br>継続: Short Magic 2B / Block 1B</p></div>
 <div class="settingsGroup"><h3>診断</h3><div id="diagBox"><div>画面更新: <span id="displayDiag">未測定</span></div><div>カメラ: <span id="cameraDiag">受信画面で測定</span></div></div><button id="measureDisplay" type="button">画面周期を測定</button><div class="muted">ブラウザから見た実効周期です。</div></div></section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="app.js?v=052"></script>
-</body></html><style>
-#home{position:relative}
-#settingsHome{position:absolute!important;right:12px!important;top:12px!important;width:48px!important;height:48px!important;min-height:48px!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:28px!important;line-height:1!important;z-index:2}
-</style>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@2.0.4/dist/qrcode.js"></script><script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script><script src="app.js"></script>
+</body></html>
